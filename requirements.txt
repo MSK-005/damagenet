@@ -1,0 +1,10 @@
+albumentations
+torch
+timm
+torchvision
+numpy
+Pillow
+pyyaml
+python-dotenv
+terratorch
+segmentation-models-pytorch

@@ -1,0 +1,38 @@
+system:
+  name: "xbd-dataset"
+  local_dir: "data"
+
+folders:
+  images: "images"
+  labels: "labels"
+  targets: "targets"
+
+naming:
+  pre_suffix: "_pre_disaster"
+  post_suffix: "_post_disaster"
+  pre_target_suffix: "_pre_disaster_target"
+  post_target_suffix: "_post_disaster_target"
+  extension: ".png"
+
+train:
+  dir: "train"
+
+test:
+  dir: "test"
+
+stats:
+# In RGB order
+  mean: 
+  - 0.3085
+  - 0.3404
+  - 0.2548
+  std:
+  - 0.1623
+  - 0.1440
+  - 0.1354
+
+item_group:
+  pre_image: "image"
+  post_image: "post_image"
+  pre_image_target: "pre_image_target"
+  post_image_target: "post_image_target"
