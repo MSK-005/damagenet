@@ -4,10 +4,13 @@ from torch.amp import GradScaler, autocast
 import segmentation_models_pytorch as smp
 from sklearn.metrics import f1_score, precision_score, recall_score
 import numpy as np
+import os
 
 from src.dataset import xBDDataset
 from src.model import DamageNet
 from src.utils import load_config
+
+os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
 
 xbd_config = load_config('xbd.yaml')
 model_config = load_config('model.yaml')
