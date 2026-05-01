@@ -7,7 +7,7 @@ import numpy as np
 
 from src.dataset import xBDDataset
 from src.model import DamageNet
-from src.config import load_config
+from src.utils import load_config
 
 xbd_config = load_config('xbd.yaml')
 model_config = load_config('model.yaml')

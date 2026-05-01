@@ -1,6 +1,5 @@
 albumentations
 torch
-torchvision
 numpy
 Pillow
 pyyaml

@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from src.dataset import xBDDataset
-from src.config import load_config
+from src.utils import load_config
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 xbd_config = load_config('xbd.yaml')
