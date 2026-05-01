@@ -14,7 +14,7 @@ def load_config(filename):
         if 'system' in data:
             host = get_host()
             if host == 'kaggle':
-                data['system']['root'] = Path(f"/kaggle/input/datasets/{data['system']['kaggle_username']}/data['system']['name']/{data['system']['name']}")
+                data['system']['root'] = Path(f"/kaggle/input/datasets/{data['system']['kaggle_username']}/{data['system']['name']}/{data['system']['name']}")
             elif host == 'local':
                 data['system']['root'] = root / data['system']['local_dir'] / data['system']['name']
             
