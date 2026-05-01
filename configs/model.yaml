@@ -4,7 +4,7 @@ model:
   encoder_weights: "imagenet"
   attention_type: "scse"
 classes:
-  num_classes: 4
+  num_classes: 5
 training:
   batch_size: 2
   accumulation_steps: 8
