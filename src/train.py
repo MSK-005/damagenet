@@ -17,11 +17,29 @@ xbd_config = load_config('xbd.yaml')
 model_config = load_config('model.yaml')
 
 
-def compute_metrics(all_preds, all_targets, num_classes):
-    f1 = f1_score(all_targets, all_preds, average='macro', zero_division=0, labels=list(range(num_classes)))
-    precision = precision_score(all_targets, all_preds, average='macro', zero_division=0, labels=list(range(num_classes)))
-    recall = recall_score(all_targets, all_preds, average='macro', zero_division=0, labels=list(range(num_classes)))
-    return f1, precision, recall
+def compute_metrics_from_confusion(confusion, num_classes):
+    f1_per_class = []
+    precision_per_class = []
+    recall_per_class = []
+
+    for i in range(num_classes):
+        tp = confusion[i, i]
+        fp = confusion[:, i].sum() - tp
+        fn = confusion[i, :].sum() - tp
+
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+
+        precision_per_class.append(precision)
+        recall_per_class.append(recall)
+        f1_per_class.append(f1)
+
+    return (
+        np.mean(f1_per_class),
+        np.mean(precision_per_class),
+        np.mean(recall_per_class)
+    )
 
 
 def train_one_epoch(model, loader, optimizer, loss_fn, scaler, device, accumulation_steps):
@@ -53,16 +71,15 @@ def train_one_epoch(model, loader, optimizer, loss_fn, scaler, device, accumulat
 def validate(model, loader, loss_fn, device, num_classes):
     model.eval()
     total_loss = 0.0
-    all_preds = []
-    all_targets = []
+    confusion = np.zeros((num_classes, num_classes), dtype=np.int64)
 
     with torch.no_grad():
         for batch in loader:
-            pre = batch['image'].to(device)
-            post = batch['post_image'].to(device)
-            target = batch['post_image_target'].to(device).long()
+            pre = batch["image"].to(device)
+            post = batch["post_image"].to(device)
+            target = batch["post_image_target"].to(device).long()
 
-            with autocast('cuda'):
+            with autocast("cuda"):
                 output = model(pre, post)
                 loss = loss_fn(output, target)
 
@@ -70,16 +87,14 @@ def validate(model, loader, loss_fn, device, num_classes):
 
             preds = output.argmax(dim=1).cpu().numpy().flatten()
             targets = target.cpu().numpy().flatten()
-            all_preds.append(preds)
-            all_targets.append(targets)
+
+            for t, p in zip(targets, preds):
+                confusion[t, p] += 1
 
             del output, pre, post, target
             torch.cuda.empty_cache()
 
-    all_preds = np.concatenate(all_preds)
-    all_targets = np.concatenate(all_targets)
-    f1, precision, recall = compute_metrics(all_preds, all_targets, num_classes)
-
+    f1, precision, recall = compute_metrics_from_confusion(confusion, num_classes)
     return total_loss / len(loader), f1, precision, recall
 
 
