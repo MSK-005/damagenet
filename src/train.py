@@ -83,29 +83,8 @@ def validate(model, loader, loss_fn, device, num_classes):
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f'Using device: {device}')
 
-
-import albumentations as A
-
-train_transforms = A.Compose(
-    [A.RandomCrop(height=512, width=512)],
-    additional_targets={
-        xbd_config['item_group']['post_image']: 'image',
-        xbd_config['item_group']['pre_image_target']: 'mask',
-        xbd_config['item_group']['post_image_target']: 'mask'
-    }
-)
-
-val_transforms = A.Compose(
-    [A.CenterCrop(height=512, width=512)],
-    additional_targets={
-        xbd_config['item_group']['post_image']: 'image',
-        xbd_config['item_group']['pre_image_target']: 'mask',
-        xbd_config['item_group']['post_image_target']: 'mask'
-    }
-)
-
-train_dataset = xBDDataset(mode='train', config=xbd_config, transforms=train_transforms)
-val_dataset = xBDDataset(mode='test', config=xbd_config, transforms=val_transforms)
+train_dataset = xBDDataset(mode='train', config=xbd_config)
+val_dataset = xBDDataset(mode='test', config=xbd_config)
 
 train_loader = DataLoader(
     train_dataset,
