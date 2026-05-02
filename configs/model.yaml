@@ -1,5 +1,5 @@
 model:
-  name: "resnet50"
+  name: "resnet18"
   in_channels: 6
   encoder_weights: "imagenet"
   attention_type: "scse"

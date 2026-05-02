@@ -60,13 +60,13 @@ class xBDDataset(Dataset):
         # Pre-disaster image file
         suffix = f'{suffix_name['pre_suffix']}{ext}'
         file_name = f'{image_id}{suffix}'
-        image = Image.open(img_dir / file_name).convert('RGB')
+        image = Image.open(img_dir / file_name).convert('RGB').resize((512, 512), Image.BILINEAR)
         image = np.array(image)
 
         # Post-disaster image file
         suffix = f'{suffix_name['post_suffix']}{ext}'
         file_name = f'{image_id}{suffix}'
-        post_image = Image.open(img_dir / file_name).convert('RGB')
+        post_image = Image.open(img_dir / file_name).convert('RGB').resize((512, 512), Image.BILINEAR)
         post_image = np.array(post_image)
 
         # data only includes the base pre- and post-disaster images for computing statistics
@@ -82,13 +82,13 @@ class xBDDataset(Dataset):
         # Target pre-disaster image file
         suffix = f'{suffix_name['pre_target_suffix']}{ext}'
         file_name = f'{image_id}{suffix}'
-        pre_image_target = Image.open(target_dir / file_name).convert('L')
+        pre_image_target = Image.open(target_dir / file_name).convert('L').resize((512, 512), Image.Nearest)
         pre_image_target = np.array(pre_image_target)
 
         # Target post-disaster image file
         suffix = f'{suffix_name['post_target_suffix']}{ext}'
         file_name = f'{image_id}{suffix}'
-        post_image_target = Image.open(target_dir / file_name).convert('L')
+        post_image_target = Image.open(target_dir / file_name).convert('L').resize((512, 512), Image.Nearest)
         post_image_target = np.array(post_image_target)
 
         # data now includes the targets as well, since the dataset must return the base images, as well as the corresponding targets
