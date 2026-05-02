@@ -73,6 +73,9 @@ def validate(model, loader, loss_fn, device, num_classes):
             all_preds.append(preds)
             all_targets.append(targets)
 
+            del output, pre, post, target
+            torch.cuda.empty_cache()
+
     all_preds = np.concatenate(all_preds)
     all_targets = np.concatenate(all_targets)
     f1, precision, recall = compute_metrics(all_preds, all_targets, num_classes)
