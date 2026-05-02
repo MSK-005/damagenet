@@ -106,6 +106,8 @@ print(f'Training samples:   {len(train_dataset)}')
 print(f'Validation samples: {len(val_dataset)}')
 
 model = DamageNet(config=model_config).to(device)
+if torch.cuda.device_count() > 1:
+    model = torch.nn.DataParallel(model)
 print(f'Total parameters: {sum(p.numel() for p in model.parameters()):,}')
 
 
