@@ -162,3 +162,4 @@ for epoch in range(epochs):
         print(f'  Saved best model (F1: {best_f1:.4f})')
 
 print(f'\nTraining complete. Best F1: {best_f1:.4f}')
+torch.save(model.state_dict(), 'model_weights.pth')
