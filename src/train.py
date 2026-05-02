@@ -5,7 +5,7 @@ import segmentation_models_pytorch as smp
 from sklearn.metrics import f1_score, precision_score, recall_score
 import numpy as np
 import os   
-import albumentations as A
+from tqdm import tqdm
 
 from src.dataset import xBDDataset
 from src.model import DamageNet
@@ -29,7 +29,7 @@ def train_one_epoch(model, loader, optimizer, loss_fn, scaler, device, accumulat
     total_loss = 0.0
     optimizer.zero_grad()
 
-    for step, batch in enumerate(loader):
+    for step, batch in enumerate(tqdm(loader)):
         pre = batch['image'].to(device)
         post = batch['post_image'].to(device)
         target = batch['post_image_target'].to(device).long()
