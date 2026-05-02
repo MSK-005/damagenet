@@ -82,13 +82,13 @@ class xBDDataset(Dataset):
         # Target pre-disaster image file
         suffix = f'{suffix_name['pre_target_suffix']}{ext}'
         file_name = f'{image_id}{suffix}'
-        pre_image_target = Image.open(target_dir / file_name).convert('L').resize((512, 512), Image.Nearest)
+        pre_image_target = Image.open(target_dir / file_name).convert('L').resize((512, 512), Image.NEAREST)
         pre_image_target = np.array(pre_image_target)
 
         # Target post-disaster image file
         suffix = f'{suffix_name['post_target_suffix']}{ext}'
         file_name = f'{image_id}{suffix}'
-        post_image_target = Image.open(target_dir / file_name).convert('L').resize((512, 512), Image.Nearest)
+        post_image_target = Image.open(target_dir / file_name).convert('L').resize((512, 512), Image.NEAREST)
         post_image_target = np.array(post_image_target)
 
         # data now includes the targets as well, since the dataset must return the base images, as well as the corresponding targets
