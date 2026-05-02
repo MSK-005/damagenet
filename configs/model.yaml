@@ -6,7 +6,7 @@ model:
 classes:
   num_classes: 5
 training:
-  batch_size: 16
+  batch_size: 4
   accumulation_steps: 8
   learning_rate: 0.0001
   epochs: 50
