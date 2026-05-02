@@ -6,8 +6,8 @@ model:
 classes:
   num_classes: 5
 training:
-  batch_size: 4
+  batch_size: 2
   accumulation_steps: 8
   learning_rate: 0.0001
-  epochs: 50
-  num_workers: 2
+  epochs: 10
+  num_workers: 0

@@ -4,7 +4,8 @@ from torch.amp import GradScaler, autocast
 import segmentation_models_pytorch as smp
 from sklearn.metrics import f1_score, precision_score, recall_score
 import numpy as np
-import os
+import os   
+import albumentations as A
 
 from src.dataset import xBDDataset
 from src.model import DamageNet
@@ -83,8 +84,28 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f'Using device: {device}')
 
 
-train_dataset = xBDDataset(mode='train', config=xbd_config)
-val_dataset = xBDDataset(mode='test', config=xbd_config)
+import albumentations as A
+
+train_transforms = A.Compose(
+    [A.RandomCrop(height=512, width=512)],
+    additional_targets={
+        xbd_config['item_group']['post_image']: 'image',
+        xbd_config['item_group']['pre_image_target']: 'mask',
+        xbd_config['item_group']['post_image_target']: 'mask'
+    }
+)
+
+val_transforms = A.Compose(
+    [A.CenterCrop(height=512, width=512)],
+    additional_targets={
+        xbd_config['item_group']['post_image']: 'image',
+        xbd_config['item_group']['pre_image_target']: 'mask',
+        xbd_config['item_group']['post_image_target']: 'mask'
+    }
+)
+
+train_dataset = xBDDataset(mode='train', config=xbd_config, transforms=train_transforms)
+val_dataset = xBDDataset(mode='test', config=xbd_config, transforms=val_transforms)
 
 train_loader = DataLoader(
     train_dataset,
