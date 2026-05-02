@@ -88,8 +88,7 @@ def validate(model, loader, loss_fn, device, num_classes):
             preds = output.argmax(dim=1).cpu().numpy().flatten()
             targets = target.cpu().numpy().flatten()
 
-            for t, p in zip(targets, preds):
-                confusion[t, p] += 1
+            np.add.at(confusion, (targets, preds), 1)
 
             del output, pre, post, target
             torch.cuda.empty_cache()
