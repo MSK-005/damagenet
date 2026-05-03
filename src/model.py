@@ -29,7 +29,6 @@ class DamageNet(nn.Module):
             encoder_channels=[c * 3 for c in encoder_channels],
             decoder_channels=decoder_channels,
             n_blocks=5,
-            use_batchnorm=True,
             attention_type=attention_type,
         )
 
