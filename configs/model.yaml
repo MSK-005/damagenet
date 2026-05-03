@@ -2,7 +2,7 @@ model:
   name: "resnet34"
   in_channels: 6
   encoder_weights: "imagenet"
-  attention_type: "scse"
+  attention_type: "None"
 
 classes:
   num_classes: 3
