@@ -10,7 +10,6 @@ class DamageNet(nn.Module):
 
         encoder_name = config['model']['name']
         encoder_weights = config['model']['encoder_weights']
-        attention_type = config['model']['attention_type']
         num_classes = config['stage2']['num_classes']
 
         # Shared encoder; called twice, once for pre and once for post
@@ -28,8 +27,7 @@ class DamageNet(nn.Module):
         self.decoder = smp.decoders.unet.decoder.UnetDecoder(
             encoder_channels=[c * 3 for c in encoder_channels],
             decoder_channels=decoder_channels,
-            n_blocks=5,
-            attention_type=attention_type,
+            n_blocks=5
         )
 
         self.head = nn.Sequential(
