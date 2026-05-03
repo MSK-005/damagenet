@@ -176,7 +176,7 @@ scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
 )
 
 scaler = GradScaler('cuda')
-best_weighted_f1 = 0.0
+best_macro_f1 = 0.0
 epochs = cfg['epochs']
 
 for epoch in range(epochs):
@@ -200,9 +200,9 @@ for epoch in range(epochs):
     print(f'Precision:     {precision:.4f}')
     print(f'Recall:        {recall:.4f}')
 
-    if weighted_f1 > best_weighted_f1:
-        best_weighted_f1 = weighted_f1
+    if macro_f1 > best_macro_f1:
+        best_macro_f1 = macro_f1
         torch.save(model.state_dict(), '/kaggle/working/stage2_best.pth')
-        print(f'  Saved best model (Weighted F1: {best_weighted_f1:.4f})')
+        print(f'  Saved best model (Macro F1: {best_macro_f1:.4f})')
 
-print(f'\nStage 2 complete. Best Weighted F1: {best_weighted_f1:.4f}')
+print(f'\nStage 2 complete. Best Macro F1: {best_macro_f1:.4f}')
