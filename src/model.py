@@ -39,15 +39,12 @@ class DamageNet(nn.Module):
     def forward(self, pre: torch.Tensor, post: torch.Tensor) -> torch.Tensor:
         features_pre = self.encoder(pre)
         features_post = self.encoder(post)
-
         features_diff = [p - r for p, r in zip(features_post, features_pre)]
-
         features_combined = [
             torch.cat([fp, fr, fd], dim=1)
             for fp, fr, fd in zip(features_pre, features_post, features_diff)
         ]
-
-        decoder_output = self.decoder(*features_combined)
+        decoder_output = self.decoder(features_combined)
         return self.head(decoder_output)
 
 

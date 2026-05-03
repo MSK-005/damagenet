@@ -152,9 +152,9 @@ stage1_state = torch.load('/kaggle/working/stage1_best.pth', map_location=device
 stage1_state = {k.replace('module.', ''): v for k, v in stage1_state.items()}
 
 encoder_state = {
-    k.replace('encoder.', ''): v
+    k.replace('model.encoder.', ''): v
     for k, v in stage1_state.items()
-    if k.startswith('encoder.')
+    if k.startswith('model.encoder.')
 }
 model.encoder.load_state_dict(encoder_state, strict=False)
 print(f'Loaded {len(encoder_state)} encoder layers from Stage 1.')
