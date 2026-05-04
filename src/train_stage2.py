@@ -164,6 +164,10 @@ encoder_state = {
 model.encoder.load_state_dict(encoder_state, strict=False)
 print(f'Loaded {len(encoder_state)} encoder layers from Stage 1.')
 
+for param in model.encoder.parameters():
+    param.requires_grad = False
+print("Encoder frozen for initial Stage 2 training.")
+
 if torch.cuda.device_count() > 1:
     model = torch.nn.DataParallel(model)
 
@@ -186,6 +190,10 @@ epochs = cfg['epochs']
 
 for epoch in range(epochs):
     print(f'\nEpoch {epoch + 1}/{epochs}')
+
+    if epoch >= 3:
+        for param in model.encoder.parameters():
+            param.requires_grad = True
 
     train_loss = train_one_epoch(
         model, train_loader, optimizer,
@@ -213,7 +221,7 @@ for epoch in range(epochs):
         except AttributeError:
             # Model was not trained on parallel GPUs
             state_dict = model.state_dict()
-        torch.save(state_dict, '/kaggle/working/stage1_best.pth')
+        torch.save(state_dict, '/kaggle/working/stage2_best.pth')
         print(f'  Saved best model (Macro F1: {best_macro_f1:.4f})')
 
 print(f'\nStage 2 complete. Best Macro F1: {best_macro_f1:.4f}')
