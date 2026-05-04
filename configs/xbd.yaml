@@ -7,7 +7,7 @@ system:
 folders:
   images: "images"
   labels: "labels"
-  targets: "targets"
+  masks: "masks"
 
 naming:
   pre_suffix: "_pre_disaster"
@@ -17,7 +17,7 @@ naming:
   extension: ".png"
 
 train:
-  dir: "train"
+  dir: "tier1"
 
 test:
   dir: "test"
