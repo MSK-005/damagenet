@@ -77,6 +77,7 @@ def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps
             scaler.step(optimizer)
             scaler.update()
             optimizer.zero_grad()
+            scheduler.step()
 
         total_loss += loss.item() * accumulation_steps
 
@@ -222,8 +223,6 @@ for epoch in range(epochs):
     val_loss, macro_f1, weighted_f1, precision, recall = validate(
         model, val_loader, device,
     )
-
-    scheduler.step()
 
     print(f'Train Loss:    {train_loss:.4f}')
     print(f'Val Loss:      {val_loss:.4f}')
