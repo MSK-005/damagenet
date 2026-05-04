@@ -84,8 +84,8 @@ train_transforms = A.Compose([
     min_height=1024,
     min_width=1024,
     border_mode=0,
-    fill_value=0,
-    fill_value_mask=0,
+    fill=0,
+    fill_mask=0,
     ),
     A.RandomCrop(height=1024, width=1024),
     A.RandomBrightnessContrast(
