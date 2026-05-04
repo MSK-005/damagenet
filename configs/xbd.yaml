@@ -12,8 +12,8 @@ folders:
 naming:
   pre_suffix: "_pre_disaster"
   post_suffix: "_post_disaster"
-  pre_target_suffix: "_pre_disaster_target"
-  post_target_suffix: "_post_disaster_target"
+  pre_target_suffix: "_pre_disaster"
+  post_target_suffix: "_post_disaster"
   extension: ".png"
 
 train:
