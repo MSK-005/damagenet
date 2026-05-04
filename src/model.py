@@ -55,7 +55,6 @@ class LocalizationNet(nn.Module):
             in_channels=config['stage1']['in_channels'],
             classes=config['stage1']['num_classes'],
             activation=None,
-            decoder_attention_type=config['model']['attention_type'],
         )
 
     def forward(self, image: torch.Tensor) -> torch.Tensor:
