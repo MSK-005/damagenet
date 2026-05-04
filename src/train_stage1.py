@@ -21,8 +21,8 @@ cfg = model_config['stage1']
 
 
 def loss_fn(output, target):
-    dice = smp.losses.DiceLoss(mode='binary')
-    focal = smp.losses.FocalLoss(mode='binary')
+    dice = smp.losses.DiceLoss(mode='binary', from_logits=True)
+    focal = smp.losses.FocalLoss(mode='binary', from_logits=True)
     return dice(output, target) + focal(output, target)
 
 
@@ -41,7 +41,7 @@ def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps
 
         scaler.scale(loss).backward()
 
-        if (step + 1) % accumulation_steps == 0 or (step + 1) == len(loader):
+        if (step + 1) % accumulation_steps == 0:
             scaler.step(optimizer)
             scaler.update()
             optimizer.zero_grad()
@@ -84,9 +84,7 @@ train_transforms = A.Compose([
         A.GaussNoise(std_range=(0.01, 0.05)),
     ], p=0.3),
 ], additional_targets={
-    'post_image': 'image',
     'pre_image_target': 'mask',
-    'post_image_target': 'mask',
 })
 
 

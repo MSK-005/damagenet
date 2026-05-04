@@ -24,8 +24,8 @@ class_weights = torch.tensor([1.0, 4.0, 8.0])
 
 
 def loss_fn(output, target, weights):
-    dice = smp.losses.DiceLoss(mode='multiclass', classes=num_classes)
-    focal = smp.losses.FocalLoss(mode='multiclass')
+    dice = smp.losses.DiceLoss(mode='multiclass', classes=num_classes, from_logits=True)
+    focal = smp.losses.FocalLoss(mode='multiclass', from_logits=True)
     ce = torch.nn.CrossEntropyLoss(weight=weights.to(output.device))
     return dice(output, target) + focal(output, target) + 2.0 * ce(output, target)
 
@@ -72,7 +72,7 @@ def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps
 
         scaler.scale(loss).backward()
 
-        if (step + 1) % accumulation_steps == 0  or (step + 1) == len(loader):
+        if (step + 1) % accumulation_steps == 0:
             scaler.step(optimizer)
             scaler.update()
             optimizer.zero_grad()
@@ -192,8 +192,13 @@ for epoch in range(epochs):
     print(f'\nEpoch {epoch + 1}/{epochs}')
 
     if epoch >= 3:
-        for param in model.encoder.parameters():
+        try:
+            encoder = model.module.encoder
+        except AttributeError:
+            encoder = model.encoder
+        for param in encoder.parameters():
             param.requires_grad = True
+        print("Encoder unfrozen.")
 
     train_loss = train_one_epoch(
         model, train_loader, optimizer,
