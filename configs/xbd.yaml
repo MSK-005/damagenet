@@ -7,7 +7,7 @@ system:
 folders:
   images: "images"
   labels: "labels"
-  masks: "masks"
+  targets: "masks"
 
 naming:
   pre_suffix: "_pre_disaster"
