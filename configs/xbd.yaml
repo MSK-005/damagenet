@@ -1,5 +1,5 @@
 system:
-  name: "xbd-dataset"
+  name: "xbd_dataset"
   subfolder_name: "xbd"
   local_dir: "data"
   kaggle_username: "qianlanzz"
