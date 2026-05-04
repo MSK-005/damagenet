@@ -64,10 +64,9 @@ def validate(model, loader, device):
 
             with autocast('cuda'):
                 output = model(image)
-                loss = loss_fn(output, target)
 
+            loss = loss_fn(output.float(), target)
             total_loss += loss.item()
-
             del output, image, target
 
     return total_loss / len(loader)

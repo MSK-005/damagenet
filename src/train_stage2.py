@@ -97,14 +97,12 @@ def validate(model, loader, device):
 
             with autocast('cuda'):
                 output = model(pre, post)
-                loss = loss_fn(output, target, class_weights)
-
+            
+            loss = loss_fn(output.float(), target, class_weights)
             total_loss += loss.item()
-
             preds = output.argmax(dim=1).cpu().numpy().flatten()
             targets = target.cpu().numpy().flatten()
             np.add.at(confusion, (targets, preds), 1)
-
             del output, pre, post, target
             torch.cuda.empty_cache()
 
