@@ -27,7 +27,7 @@ def loss_fn(output, target, weights):
     dice = smp.losses.DiceLoss(mode='multiclass', classes=num_classes, from_logits=True)
     focal = smp.losses.FocalLoss(mode='multiclass')
     ce = torch.nn.CrossEntropyLoss(weight=weights.to(output.device))
-    probs = torch.sigmoid(output).clamp(min=1e-6, max=1 - 1e-6)
+    probs = torch.softmax(output, dim=1).clamp(min=1e-6, max=1 - 1e-6)
     return dice(output, target) + focal(probs, target) + 2.0 * ce(output, target)
 
 
@@ -77,7 +77,7 @@ def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps
             scaler.step(optimizer)
             scaler.update()
             optimizer.zero_grad()
-            scheduler.step()
+            
 
         total_loss += loss.item() * accumulation_steps
 
@@ -121,11 +121,11 @@ train_transforms = A.Compose([
     A.RandomRotate90(p=0.5),
     A.RandomScale(scale_limit=(-0.5, 0.0), p=0.5),
     A.PadIfNeeded(
-        min_height=1024,
-        min_width=1024,
-        border_mode=0,
-        value=0,
-        mask_value=0,
+    min_height=1024,
+    min_width=1024,
+    border_mode=0,
+    fill_value=0,
+    fill_value_mask=0,
     ),
     A.RandomCrop(height=1024, width=1024),
     A.RandomBrightnessContrast(
@@ -223,6 +223,8 @@ for epoch in range(epochs):
     val_loss, macro_f1, weighted_f1, precision, recall = validate(
         model, val_loader, device,
     )
+
+    scheduler.step()
 
     print(f'Train Loss:    {train_loss:.4f}')
     print(f'Val Loss:      {val_loss:.4f}')
