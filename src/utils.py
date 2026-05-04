@@ -18,18 +18,19 @@ def get_xbd_image_ids(path):
     return sorted(list(ids))
 
 def load_config(filename):
-   root = Path(__file__).resolve().parents[1]
-   config_path = root / "configs" / filename
-   if not config_path.exists():
+    config_path = get_file_path(filename=filename, folders='configs')
+    root = get_root_path()
+
+    if not config_path.exists():
        raise Exception(f"Could not open '{filename}'. All config files are located in the 'configs' directory. Please ensure correct spelling.")
 
-   with open(config_path, 'r') as file:
+    with open(config_path, 'r') as file:
         data = yaml.safe_load(file)
         # Checking if config file is a dataset file or not
         if 'system' in data:
             host = get_host()
             if host == 'kaggle':
-                data['system']['root'] = Path(f"/kaggle/input/datasets/{data['system']['kaggle_username']}/{data['system']['name']}/{data['system']['name']}")
+                data['system']['root'] = Path(f"/kaggle/input/datasets/{data['system']['kaggle_username']}/{data['system']['name']}/{data['system']['subfolder_name']}")
             elif host == 'local':
                 data['system']['root'] = root / data['system']['local_dir'] / data['system']['name']
             
@@ -45,3 +46,14 @@ def get_host():
         return 'kaggle'
     return 'local'
 
+def get_root_path():
+    return Path(__file__).resolve().parents[1]
+
+def get_file_path(filename, folders="", check_exists=False):
+    root = get_root_path()
+    file_path = root / folders / filename
+
+    if check_exists and not file_path.exists():
+        raise FileNotFoundError(f'Could not find file path: {file_path}')
+
+    return file_path

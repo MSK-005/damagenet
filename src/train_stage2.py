@@ -117,6 +117,11 @@ train_transforms = A.Compose([
     A.HorizontalFlip(p=0.5),
     A.VerticalFlip(p=0.5),
     A.RandomRotate90(p=0.5),
+    A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),
+    A.OneOf([
+        A.GaussianBlur(blur_limit=(3, 5)),
+        A.GaussNoise(var_limit=(10, 50)),
+    ], p=0.3)
 ], additional_targets={
     'post_image': 'image',
     'pre_image_target': 'mask',
@@ -202,7 +207,13 @@ for epoch in range(epochs):
 
     if macro_f1 > best_macro_f1:
         best_macro_f1 = macro_f1
-        torch.save(model.state_dict(), '/kaggle/working/stage2_best.pth')
+        try:
+            # If model was trained using parallel GPUs
+            state_dict = model.module.state_dict()
+        except AttributeError:
+            # Model was not trained on parallel GPUs
+            state_dict = model.state_dict()
+        torch.save(state_dict, '/kaggle/working/stage1_best.pth')
         print(f'  Saved best model (Macro F1: {best_macro_f1:.4f})')
 
 print(f'\nStage 2 complete. Best Macro F1: {best_macro_f1:.4f}')

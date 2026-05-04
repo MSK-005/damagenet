@@ -1,7 +1,8 @@
 system:
   name: "xbd-dataset"
+  subfolder_name: "xbd"
   local_dir: "data"
-  kaggle_username: "moazzamshahzad"
+  kaggle_username: "qianlanzz"
 
 folders:
   images: "images"

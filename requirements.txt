@@ -5,3 +5,7 @@ Pillow
 pyyaml
 segmentation-models-pytorch
 tqdm
+onnx
+onnxscript
+onnxruntime
+gradio

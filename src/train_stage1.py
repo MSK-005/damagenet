@@ -79,7 +79,17 @@ train_transforms = A.Compose([
     A.HorizontalFlip(p=0.5),
     A.VerticalFlip(p=0.5),
     A.RandomRotate90(p=0.5),
-], additional_targets={'pre_image_target': 'mask'})
+    A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),
+    A.OneOf([
+        A.GaussianBlur(blur_limit=(3, 5)),
+        A.GaussNoise(var_limit=(10, 50)),
+    ], p=0.3),
+], additional_targets={
+    'post_image': 'image',
+    'pre_image_target': 'mask',
+    'post_image_target': 'mask',
+})
+
 
 train_dataset = xBDDataset(mode='train', config=xbd_config, stage=1, transforms=train_transforms)
 val_dataset = xBDDataset(mode='test', config=xbd_config, stage=1)
@@ -142,7 +152,13 @@ for epoch in range(epochs):
 
     if val_loss < best_val_loss:
         best_val_loss = val_loss
-        torch.save(model.state_dict(), '/kaggle/working/stage1_best.pth')
+        try:
+            # If model was trained using parallel GPUs
+            state_dict = model.module.state_dict()
+        except AttributeError:
+            # Model was not trained on parallel GPUs
+            state_dict = model.state_dict()
+        torch.save(state_dict, '/kaggle/working/stage1_best.pth')
         print(f'  Saved best Stage 1 model (Val Loss: {best_val_loss:.4f})')
 
 print(f'\nStage 1 complete. Best Val Loss: {best_val_loss:.4f}')
