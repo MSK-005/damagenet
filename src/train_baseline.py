@@ -14,7 +14,7 @@ from src.utils import load_config
 os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
 
 xbd_config = load_config('xbd.yaml')
-model_config = load_config('model.yaml')
+model_config = load_config('model_baseline.yaml')
 
 
 def compute_metrics_from_confusion(confusion, num_classes):
