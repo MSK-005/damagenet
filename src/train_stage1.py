@@ -22,7 +22,7 @@ cfg = model_config['stage1']
 
 def loss_fn(output, target):
     dice = smp.losses.DiceLoss(mode='binary', from_logits=True)
-    focal = smp.losses.FocalLoss(mode='binary', from_logits=True)
+    focal = smp.losses.FocalLoss(mode='binary')
     return dice(output, target) + focal(output, target)
 
 
