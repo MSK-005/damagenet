@@ -72,7 +72,7 @@ def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps
 
         scaler.scale(loss).backward()
 
-        if (step + 1) % accumulation_steps == 0:
+        if (step + 1) % accumulation_steps == 0  or (step + 1) == len(loader):
             scaler.step(optimizer)
             scaler.update()
             optimizer.zero_grad()
