@@ -81,8 +81,8 @@ train_transforms = A.Compose([
     A.RandomRotate90(p=0.5),
     A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),
     A.OneOf([
-        A.GaussianBlur(blur_limit=(3, 5)),
-        A.GaussNoise(var_limit=(10, 50)),
+        A.GaussianBlur(std_range=(3, 5)),
+        A.GaussNoise(std_range=(0.01, 0.05)),
     ], p=0.3),
 ], additional_targets={
     'post_image': 'image',
