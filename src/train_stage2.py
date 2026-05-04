@@ -25,7 +25,7 @@ class_weights = torch.tensor([1.0, 4.0, 8.0])
 
 def loss_fn(output, target, weights):
     dice = smp.losses.DiceLoss(mode='multiclass', classes=num_classes, from_logits=True)
-    focal = smp.losses.FocalLoss(mode='multiclass', from_logits=True)
+    focal = smp.losses.FocalLoss(mode='multiclass')
     ce = torch.nn.CrossEntropyLoss(weight=weights.to(output.device))
     return dice(output, target) + focal(output, target) + 2.0 * ce(output, target)
 
