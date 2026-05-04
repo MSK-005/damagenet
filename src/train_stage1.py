@@ -23,7 +23,8 @@ cfg = model_config['stage1']
 def loss_fn(output, target):
     dice = smp.losses.DiceLoss(mode='binary', from_logits=True)
     focal = smp.losses.FocalLoss(mode='binary')
-    return dice(output, target) + focal(output, target)
+    probs = torch.sigmoid(output).clamp(min=1e-6, max=1 - 1e-6)
+    return dice(output, target) + focal(probs, target)
 
 
 def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps):
@@ -78,13 +79,26 @@ train_transforms = A.Compose([
     A.HorizontalFlip(p=0.5),
     A.VerticalFlip(p=0.5),
     A.RandomRotate90(p=0.5),
-    A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),
+    A.RandomScale(scale_limit=(-0.5, 0.0), p=0.5),
+    A.PadIfNeeded(
+        min_height=1024,
+        min_width=1024,
+        border_mode=0,
+        value=0,
+        mask_value=0,
+    ),
+    A.RandomCrop(height=1024, width=1024),
+    A.RandomBrightnessContrast(
+        brightness_limit=0.2,
+        contrast_limit=0.2,
+        p=0.5,
+    ),
     A.OneOf([
         A.GaussianBlur(sigma_limit=(3, 5)),
         A.GaussNoise(std_range=(0.01, 0.05)),
     ], p=0.3),
 ], additional_targets={
-    'pre_image_target': 'mask',
+    xbd_config['item_group']['pre_image_target']: 'mask'
 })
 
 
