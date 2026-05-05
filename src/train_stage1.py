@@ -39,6 +39,12 @@ def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps
         with autocast('cuda'):
             output = model(image)
 
+        if torch.isnan(output).any():
+            print(f"NaN in output at step {step}")
+            print(f"Image min/max: {image.min():.4f} / {image.max():.4f}")
+            print(f"Target min/max: {target.min():.4f} / {target.max():.4f}")
+            break
+
         loss = loss_fn(output, target) / accumulation_steps
         scaler.scale(loss).backward()
 
