@@ -67,8 +67,8 @@ def validate(model, loader, device):
             loss = loss_fn(output, target)
             total_loss += loss.item()
             del output, image, target
-
-    torch.cuda.empty_cache()
+            torch.cuda.empty_cache()
+    
     return total_loss / len(loader)
 
 
@@ -141,7 +141,7 @@ scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
     optimizer,
     T_max=cfg['epochs'],
 )
-
+    
 scaler = GradScaler('cuda')
 best_val_loss = float('inf')
 epochs = cfg['epochs']

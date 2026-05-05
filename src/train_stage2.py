@@ -105,8 +105,8 @@ def validate(model, loader, device):
             targets = target.cpu().numpy().flatten()
             np.add.at(confusion, (targets, preds), 1)
             del output, pre, post, target
+            torch.cuda.empty_cache()
 
-    torch.cuda.empty_cache()
     macro_f1, weighted_f1, precision, recall = compute_metrics_from_confusion(confusion)
     return total_loss / len(loader), macro_f1, weighted_f1, precision, recall
 
