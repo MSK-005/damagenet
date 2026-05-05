@@ -36,8 +36,8 @@ def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps
         image = batch['image'].to(device)
         target = batch['pre_image_target'].to(device).float().unsqueeze(1)
         print("target sum:", target.sum().item())
-        with autocast('cuda'):
-            output = model(image)
+        #with autocast('cuda'):
+        output = model(image)
 
         if torch.isnan(output).any():
             print(f"NaN in output at step {step}")
@@ -81,8 +81,8 @@ def validate(model, loader, device):
             image = batch['image'].to(device)
             target = batch['pre_image_target'].to(device).float().unsqueeze(1)
 
-            with autocast('cuda'):
-                output = model(image)
+            #with autocast('cuda'):
+            output = model(image)
 
             loss = loss_fn(output, target)
             total_loss += loss.item()
