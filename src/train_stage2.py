@@ -25,10 +25,9 @@ class_weights = torch.tensor([1.0, 4.0, 8.0])
 
 def loss_fn(output, target, weights):
     dice = smp.losses.DiceLoss(mode='multiclass', classes=num_classes, from_logits=True)
-    focal = smp.losses.FocalLoss(mode='multiclass')
+    focal = smp.losses.FocalLoss(mode='multiclass', from_logits=True)
     ce = torch.nn.CrossEntropyLoss(weight=weights.to(output.device))
-    probs = torch.softmax(output, dim=1).clamp(min=1e-6, max=1 - 1e-6)
-    return dice(output, target) + focal(probs, target) + 2.0 * ce(output, target)
+    return dice(output, target) + focal(output, target) + 2.0 * ce(output, target)
 
 
 def compute_metrics_from_confusion(confusion):
@@ -69,8 +68,8 @@ def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps
 
         with autocast('cuda'):
             output = model(pre, post)
-            loss = loss_fn(output, target, class_weights) / accumulation_steps
-
+        
+        loss = loss_fn(output, target, class_weights) / accumulation_steps
         scaler.scale(loss).backward()
 
         if (step + 1) % accumulation_steps == 0:
@@ -98,7 +97,7 @@ def validate(model, loader, device):
             with autocast('cuda'):
                 output = model(pre, post)
             
-            loss = loss_fn(output.float(), target, class_weights)
+            loss = loss_fn(output, target, class_weights)
             total_loss += loss.item()
             preds = output.argmax(dim=1).cpu().numpy().flatten()
             targets = target.cpu().numpy().flatten()

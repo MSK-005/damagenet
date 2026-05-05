@@ -22,9 +22,8 @@ cfg = model_config['stage1']
 
 def loss_fn(output, target):
     dice = smp.losses.DiceLoss(mode='binary', from_logits=True)
-    focal = smp.losses.FocalLoss(mode='binary')
-    probs = torch.sigmoid(output).clamp(min=1e-6, max=1 - 1e-6)
-    return dice(output, target) + focal(probs, target)
+    focal = smp.losses.FocalLoss(mode='binary', from_logits=True)
+    return dice(output, target) + focal(output, target)
 
 
 def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps):
@@ -39,8 +38,7 @@ def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps
         with autocast('cuda'):
             output = model(image)
 
-        loss = loss_fn(output.float(), target) / accumulation_steps
-
+        loss = loss_fn(output, target) / accumulation_steps
         scaler.scale(loss).backward()
 
         if (step + 1) % accumulation_steps == 0:
@@ -65,7 +63,7 @@ def validate(model, loader, device):
             with autocast('cuda'):
                 output = model(image)
 
-            loss = loss_fn(output.float(), target)
+            loss = loss_fn(output, target)
             total_loss += loss.item()
             del output, image, target
 
