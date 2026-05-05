@@ -21,10 +21,15 @@ cfg = model_config['stage1']
 
 
 def loss_fn(output, target):
-    dice = smp.losses.DiceLoss(mode='binary', from_logits=True, smooth=1.0)
+    dice = smp.losses.DiceLoss(mode='binary', from_logits=True)
     focal = smp.losses.FocalLoss(mode='binary')
-    probs = torch.sigmoid(output.float()).clamp(min=1e-6, max=1 - 1e-6)
-    return dice(output, target) + focal(probs, target)
+
+    dice_loss = dice(output, target)
+
+    probs = torch.sigmoid(output)
+    focal_loss = focal(probs, target)
+
+    return dice_loss + focal_loss
 
 
 def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps):
@@ -51,6 +56,13 @@ def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps
             print(f"Bad loss at step {step}: {loss.item()}")
             print(f"Output min/max: {output.float().min():.4f} / {output.float().max():.4f}")
             print(f"Target unique: {target.unique()}")
+
+        if not torch.isfinite(loss):
+            print("Non-finite loss detected")
+            print("logits:", output.min().item(), output.max().item())
+            print("targets:", target.unique())
+            break
+        
         scaler.scale(loss).backward()
 
         if (step + 1) % accumulation_steps == 0:
