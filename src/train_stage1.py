@@ -21,7 +21,7 @@ cfg = model_config['stage1']
 
 
 def loss_fn(output, target):
-    dice = smp.losses.DiceLoss(mode='binary', from_logits=True)
+    dice = smp.losses.DiceLoss(mode='binary', from_logits=True, smooth=1.0)
     focal = smp.losses.FocalLoss(mode='binary')
     probs = torch.sigmoid(output.float()).clamp(min=1e-6, max=1 - 1e-6)
     return dice(output, target) + focal(probs, target)
