@@ -18,9 +18,6 @@ model_config = load_config('model.yaml')
 
 cfg = model_config['stage1']
 
-torch.autograd.set_detect_anomaly(True)
-
-
 def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps):
     model.train()
     total_loss = 0.0
@@ -116,6 +113,7 @@ train_loader = DataLoader(
     shuffle=True,
     num_workers=cfg['num_workers'],
     pin_memory=True,
+    persistent_workers=True
 )
 
 val_loader = DataLoader(
@@ -124,6 +122,7 @@ val_loader = DataLoader(
     shuffle=False,
     num_workers=cfg['num_workers'],
     pin_memory=True,
+    persistent_workers=True
 )
 
 print(f'Training samples:   {len(train_dataset)}')

@@ -17,7 +17,7 @@ os.environ['PYTORCH_NO_CUDA_MEMORY_CACHING'] = '1'
 xbd_config   = load_config('xbd.yaml')
 model_config = load_config('model.yaml')
 
-cfg         = model_config['stage2']
+cfg = model_config['stage2']
 num_classes = cfg['num_classes']
 
 # Weights reflect xBD class imbalance: background < minor < major/destroyed
@@ -149,6 +149,7 @@ train_loader = DataLoader(
     shuffle=True,
     num_workers=cfg['num_workers'],
     pin_memory=True,
+    persistent_workers=True
 )
 
 val_loader = DataLoader(
@@ -157,6 +158,7 @@ val_loader = DataLoader(
     shuffle=False,
     num_workers=cfg['num_workers'],
     pin_memory=True,
+    persistent_workers=True
 )
 
 print(f'Training samples:   {len(train_dataset)}')
