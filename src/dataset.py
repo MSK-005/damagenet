@@ -48,16 +48,18 @@ class xBDDataset(Dataset):
 
         transform_img_keys = self.config['item_group']
 
-        transforms_list = [A.ToFloat(max_value=255.0)]
         additional_targets = {}
 
-        if self.mode != 'stats':
-            transforms_list.append(
+        if self.mode == 'stats':
+            transforms_list = [A.ToFloat(max_value=255.0)]
+        else:
+            transforms_list = [
                 A.Normalize(
                     mean=self.config['stats']['mean'],
                     std=self.config['stats']['std'],
+                    max_pixel_value=255.0
                 )
-            )
+            ]
 
             if self.stage == 1:
                 additional_targets[transform_img_keys['pre_image_target']] = 'mask'
