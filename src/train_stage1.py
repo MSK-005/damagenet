@@ -35,13 +35,11 @@ def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps
     for step, batch in enumerate(tqdm(loader)):
         image = batch['image'].to(device)
         target = batch['pre_image_target'].to(device).float().unsqueeze(1)
-        with autocast('cuda'):
-            output = model(image)
-
+        #with autocast('cuda'):
+        output = model(image)
         loss = loss_fn(output, target) / accumulation_steps
 
         scaler.scale(loss).backward()
-
         if (step + 1) % accumulation_steps == 0:
             scaler.unscale_(optimizer)
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -63,10 +61,10 @@ def validate(model, loader, device):
             image = batch['image'].to(device)
             target = batch['pre_image_target'].to(device).float().unsqueeze(1)
 
-            with autocast('cuda'):
-                output = model(image)
-
+            #with autocast('cuda'):
+            output = model(image)
             loss = loss_fn(output, target)
+            
             total_loss += loss.item()
             del output, image, target
 
