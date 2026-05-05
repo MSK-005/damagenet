@@ -1,5 +1,6 @@
 import os
 import torch
+import wandb
 import numpy as np
 from torch.utils.data import DataLoader
 from torch.amp import GradScaler, autocast
@@ -23,6 +24,20 @@ num_classes = cfg['num_classes']
 # Weights reflect xBD class imbalance: background < minor < major/destroyed
 class_weights = torch.tensor([1.0, 4.0, 8.0])
 
+wandb.init(
+    project="damagenet",
+    name="stage2",
+    config={
+        "encoder":            model_config['model']['name'],
+        "epochs":             cfg['epochs'],
+        "batch_size":         cfg['batch_size'],
+        "learning_rate":      cfg['learning_rate'],
+        "accumulation_steps": cfg['accumulation_steps'],
+        "num_classes":        cfg['num_classes'],
+        "class_weights":      class_weights.tolist(),
+        "encoder_unfreeze_epoch": 3,
+    }
+)
 
 def compute_metrics_from_confusion(confusion):
     f1_per_class        = []
@@ -168,7 +183,6 @@ model = DamageNet(config=model_config).to(device)
 
 print('Loading Stage 1 weights...')
 stage1_state = torch.load('/kaggle/working/stage1_best.pth', map_location=device)
-stage1_state = {k.replace('module.', ''): v for k, v in stage1_state.items()}
 
 encoder_state = {
     k.replace('model.encoder.', ''): v
@@ -232,6 +246,17 @@ for epoch in range(epochs):
     print(f'Precision:     {precision:.4f}')
     print(f'Recall:        {recall:.4f}')
 
+    wandb.log({
+        "epoch":        epoch + 1,
+        "train_loss":   train_loss,
+        "val_loss":     val_loss,
+        "lr":           scheduler.get_last_lr()[0],
+        "f1_macro":     macro_f1,
+        "f1_weighted":  weighted_f1,
+        "precision":    precision,
+        "recall":       recall,
+    })
+
     if macro_f1 > best_macro_f1:
         best_macro_f1 = macro_f1
         try:
@@ -242,3 +267,4 @@ for epoch in range(epochs):
         print(f'  Saved best model (Macro F1: {best_macro_f1:.4f})')
 
 print(f'\nStage 2 complete. Best Macro F1: {best_macro_f1:.4f}')
+wandb.finish()

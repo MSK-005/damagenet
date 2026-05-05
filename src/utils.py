@@ -39,11 +39,10 @@ def load_config(filename):
         return data
 
 def get_host():
-    """
-    Checks if code is running on Kaggle or a local machine
-    """
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE', ''):
         return 'kaggle'
+    if os.environ.get('SPACE_ID', ''):
+        return 'huggingface'
     return 'local'
 
 def get_root_path():

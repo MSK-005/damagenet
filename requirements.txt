@@ -9,3 +9,4 @@ onnx
 onnxscript
 onnxruntime
 gradio
+wandb

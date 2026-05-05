@@ -1,6 +1,8 @@
 # Custom file/folder names go here
 data/xbd-dataset
-models
+models/
+*.pth
+*.onnx
 
 
 # Byte-compiled / optimized / DLL files

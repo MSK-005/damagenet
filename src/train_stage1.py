@@ -1,5 +1,6 @@
 import os
 import torch
+import wandb
 from torch.utils.data import DataLoader
 from torch.amp import GradScaler, autocast
 from tqdm import tqdm
@@ -17,6 +18,22 @@ xbd_config   = load_config('xbd.yaml')
 model_config = load_config('model.yaml')
 
 cfg = model_config['stage1']
+
+wandb.init(
+    project="damagenet",
+    name="stage1",
+    config={
+        "encoder":            model_config['model']['name'],
+        "epochs":             cfg['epochs'],
+        "batch_size":         cfg['batch_size'],
+        "learning_rate":      cfg['learning_rate'],
+        "accumulation_steps": cfg['accumulation_steps'],
+        "bce_weight":         1.0,
+        "dice_weight":        1.0,
+        "lovasz_weight":      1.0,
+        "pos_weight":         5.0,
+    }
+)
 
 def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps):
     model.train()
@@ -165,6 +182,13 @@ for epoch in range(epochs):
     print(f'Train Loss: {train_loss:.4f}')
     print(f'Val Loss:   {val_loss:.4f}')
 
+    wandb.log({
+        "epoch":      epoch + 1,
+        "train_loss": train_loss,
+        "val_loss":   val_loss,
+        "lr":         scheduler.get_last_lr()[0],
+    })
+
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         try:
@@ -175,3 +199,4 @@ for epoch in range(epochs):
         print(f'  Saved best Stage 1 model (Val Loss: {best_val_loss:.4f})')
 
 print(f'\nStage 1 complete. Best Val Loss: {best_val_loss:.4f}')
+wandb.finish()
