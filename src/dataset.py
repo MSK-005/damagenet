@@ -92,6 +92,8 @@ class xBDDataset(Dataset):
         pre_target_file  = f"{image_id}{suffix['pre_target_suffix']}{ext}"
         pre_image_target = np.array(Image.open(target_dir / pre_target_file).convert('L'))
         pre_image_target = (pre_image_target > 0).astype(np.uint8)
+        
+        print(np.unique(pre_image_target))
 
         if self.mode == 'stats':
             data = {group['pre_image']: image}

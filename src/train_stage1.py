@@ -23,10 +23,9 @@ torch.autograd.set_detect_anomaly(True)
 
 
 def loss_fn(output, target):
-    dice = smp.losses.DiceLoss(mode='binary', from_logits=True)
-    #focal = smp.losses.FocalLoss(mode='binary', alpha=0.25, gamma=2.0)
-
-    return dice(output, target) #+ focal(output, target)
+    dice = smp.losses.DiceLoss(mode='binary', from_logits=True, smooth=1.0)
+    focal = smp.losses.FocalLoss(mode='binary', alpha=0.25, gamma=2.0)
+    return dice(output, target) + focal(output, target)
 
 def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps):
     model.train()
@@ -36,7 +35,7 @@ def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps
     for step, batch in enumerate(tqdm(loader)):
         image = batch['image'].to(device)
         target = batch['pre_image_target'].to(device).float().unsqueeze(1)
-
+        print("target sum:", target.sum().item())
         with autocast('cuda'):
             output = model(image)
 
