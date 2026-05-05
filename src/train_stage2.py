@@ -61,7 +61,7 @@ def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps
     total_loss = 0.0
     optimizer.zero_grad()
 
-    for step, batch in enumerate(tqdm(loader)):
+    for step, batch in enumerate(tqdm(loader)): 
         pre = batch['image'].to(device)
         post = batch['post_image'].to(device)
         target = batch['post_image_target'].to(device).long()
@@ -96,15 +96,16 @@ def validate(model, loader, device):
 
             with autocast('cuda'):
                 output = model(pre, post)
-            
+
             loss = loss_fn(output, target, class_weights)
             total_loss += loss.item()
+
             preds = output.argmax(dim=1).cpu().numpy().flatten()
             targets = target.cpu().numpy().flatten()
             np.add.at(confusion, (targets, preds), 1)
             del output, pre, post, target
-            torch.cuda.empty_cache()
 
+    torch.cuda.empty_cache()
     macro_f1, weighted_f1, precision, recall = compute_metrics_from_confusion(confusion)
     return total_loss / len(loader), macro_f1, weighted_f1, precision, recall
 

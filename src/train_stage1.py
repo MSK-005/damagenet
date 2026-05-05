@@ -67,6 +67,7 @@ def validate(model, loader, device):
             total_loss += loss.item()
             del output, image, target
 
+    torch.cuda.empty_cache()
     return total_loss / len(loader)
 
 
