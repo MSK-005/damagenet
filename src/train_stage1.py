@@ -19,18 +19,14 @@ model_config = load_config('model.yaml')
 
 cfg = model_config['stage1']
 
+torch.autograd.set_detect_anomaly(True)
+
 
 def loss_fn(output, target):
     dice = smp.losses.DiceLoss(mode='binary', from_logits=True)
-    focal = smp.losses.FocalLoss(mode='binary')
+    #focal = smp.losses.FocalLoss(mode='binary', alpha=0.25, gamma=2.0)
 
-    dice_loss = dice(output, target)
-
-    probs = torch.sigmoid(output)
-    focal_loss = focal(probs, target)
-
-    return dice_loss + focal_loss
-
+    return dice(output, target) #+ focal(output, target)
 
 def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps):
     model.train()
@@ -62,7 +58,7 @@ def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps
             print("logits:", output.min().item(), output.max().item())
             print("targets:", target.unique())
             break
-        
+
         scaler.scale(loss).backward()
 
         if (step + 1) % accumulation_steps == 0:
