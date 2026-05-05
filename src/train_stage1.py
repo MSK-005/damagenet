@@ -22,8 +22,9 @@ cfg = model_config['stage1']
 
 def loss_fn(output, target):
     dice = smp.losses.DiceLoss(mode='binary', from_logits=True)
-    focal = smp.losses.FocalLoss(mode='binary', from_logits=True)
-    return dice(output, target) + focal(output, target)
+    focal = smp.losses.FocalLoss(mode='binary')
+    probs = torch.sigmoid(output.float()).clamp(min=1e-6, max=1 - 1e-6)
+    return dice(output, target) + focal(probs, target)
 
 
 def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps):

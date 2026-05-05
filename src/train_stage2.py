@@ -25,9 +25,10 @@ class_weights = torch.tensor([1.0, 4.0, 8.0])
 
 def loss_fn(output, target, weights):
     dice = smp.losses.DiceLoss(mode='multiclass', classes=num_classes, from_logits=True)
-    focal = smp.losses.FocalLoss(mode='multiclass', from_logits=True)
+    focal = smp.losses.FocalLoss(mode='multiclass')
     ce = torch.nn.CrossEntropyLoss(weight=weights.to(output.device))
-    return dice(output, target) + focal(output, target) + 2.0 * ce(output, target)
+    probs = torch.softmax(output.float(), dim=1).clamp(min=1e-6, max=1 - 1e-6)
+    return dice(output, target) + focal(probs, target) + 2.0 * ce(output, target)
 
 
 def compute_metrics_from_confusion(confusion):
