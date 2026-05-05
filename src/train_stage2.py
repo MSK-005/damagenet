@@ -118,15 +118,6 @@ train_transforms = A.Compose([
     A.HorizontalFlip(p=0.5),
     A.VerticalFlip(p=0.5),
     A.RandomRotate90(p=0.5),
-    A.RandomScale(scale_limit=(-0.5, 0.0), p=0.5),
-    A.PadIfNeeded(
-    min_height=1024,
-    min_width=1024,
-    border_mode=0,
-    fill=0,
-    fill_mask=0,
-    ),
-    A.RandomCrop(height=1024, width=1024),
     A.RandomBrightnessContrast(
         brightness_limit=0.2,
         contrast_limit=0.2,
