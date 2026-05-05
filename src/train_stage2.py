@@ -1,7 +1,6 @@
 import os
 import torch
 import numpy as np
-import segmentation_models_pytorch as smp
 from torch.utils.data import DataLoader
 from torch.amp import GradScaler, autocast
 from tqdm import tqdm
@@ -10,33 +9,27 @@ import albumentations as A
 from src.utils import load_config
 from src.dataset import xBDDataset
 from src.model import DamageNet
+from src.losses import Stage2Loss
 
 os.environ['PYTORCH_ALLOC_CONF'] = 'expandable_segments:True'
 os.environ['PYTORCH_NO_CUDA_MEMORY_CACHING'] = '1'
 
-xbd_config = load_config('xbd.yaml')
+xbd_config   = load_config('xbd.yaml')
 model_config = load_config('model.yaml')
 
-cfg = model_config['stage2']
+cfg         = model_config['stage2']
 num_classes = cfg['num_classes']
 
+# Weights reflect xBD class imbalance: background < minor < major/destroyed
 class_weights = torch.tensor([1.0, 4.0, 8.0])
 
 
-def loss_fn(output, target, weights):
-    dice = smp.losses.DiceLoss(mode='multiclass', classes=num_classes, from_logits=True)
-    focal = smp.losses.FocalLoss(mode='multiclass')
-    ce = torch.nn.CrossEntropyLoss(weight=weights.to(output.device))
-    probs = torch.softmax(output.float(), dim=1).clamp(min=1e-6, max=1 - 1e-6)
-    return dice(output, target) + focal(probs, target) + 2.0 * ce(output, target)
-
-
 def compute_metrics_from_confusion(confusion):
-    f1_per_class = []
+    f1_per_class        = []
     precision_per_class = []
-    recall_per_class = []
-    class_counts = confusion.sum(axis=1)
-    total = class_counts.sum()
+    recall_per_class    = []
+    class_counts        = confusion.sum(axis=1)
+    total               = class_counts.sum()
 
     for i in range(num_classes):
         tp = confusion[i, i]
@@ -44,14 +37,14 @@ def compute_metrics_from_confusion(confusion):
         fn = confusion[i, :].sum() - tp
 
         precision = tp / (tp + fp) if (tp + fp) > 0 else 0
-        recall = tp / (tp + fn) if (tp + fn) > 0 else 0
-        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+        recall    = tp / (tp + fn) if (tp + fn) > 0 else 0
+        f1        = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
 
         precision_per_class.append(precision)
         recall_per_class.append(recall)
         f1_per_class.append(f1)
 
-    macro_f1 = np.mean(f1_per_class)
+    macro_f1    = np.mean(f1_per_class)
     weighted_f1 = np.sum([f1_per_class[i] * class_counts[i] for i in range(num_classes)]) / total
 
     return macro_f1, weighted_f1, np.mean(precision_per_class), np.mean(recall_per_class)
@@ -63,14 +56,15 @@ def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps
     optimizer.zero_grad()
 
     for step, batch in enumerate(tqdm(loader)):
-        pre = batch['image'].to(device)
-        post = batch['post_image'].to(device)
+        pre    = batch['image'].to(device)
+        post   = batch['post_image'].to(device)
         target = batch['post_image_target'].to(device).long()
 
         with autocast('cuda'):
             output = model(pre, post)
-            loss = loss_fn(output, target, class_weights) / accumulation_steps
-        
+            # Stage2Loss casts to fp32 internally — safe under autocast
+            loss = loss_fn(output, target) / accumulation_steps
+
         scaler.scale(loss).backward()
 
         if (step + 1) % accumulation_steps == 0:
@@ -88,21 +82,21 @@ def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps
 def validate(model, loader, device):
     model.eval()
     total_loss = 0.0
-    confusion = np.zeros((num_classes, num_classes), dtype=np.int64)
+    confusion  = np.zeros((num_classes, num_classes), dtype=np.int64)
 
     with torch.no_grad():
         for batch in loader:
-            pre = batch['image'].to(device)
-            post = batch['post_image'].to(device)
+            pre    = batch['image'].to(device)
+            post   = batch['post_image'].to(device)
             target = batch['post_image_target'].to(device).long()
 
             with autocast('cuda'):
                 output = model(pre, post)
-                loss = loss_fn(output, target, class_weights)
-            
+                loss   = loss_fn(output, target)
+
             total_loss += loss.item()
 
-            preds = output.argmax(dim=1).cpu().numpy().flatten()
+            preds   = output.argmax(dim=1).cpu().numpy().flatten()
             targets = target.cpu().numpy().flatten()
             np.add.at(confusion, (targets, preds), 1)
             del output, pre, post, target
@@ -114,6 +108,9 @@ def validate(model, loader, device):
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f'Using device: {device}')
+
+# Instantiate loss before DataParallel so buffers land on the right device
+loss_fn = Stage2Loss(class_weights=class_weights).to(device)
 
 train_transforms = A.Compose([
     A.HorizontalFlip(p=0.5),
@@ -138,13 +135,13 @@ train_transforms = A.Compose([
         A.GaussNoise(std_range=(0.01, 0.05)),
     ], p=0.3),
 ], additional_targets={
-    xbd_config['item_group']['post_image']: 'image',
-    xbd_config['item_group']['pre_image_target']: 'mask',
+    xbd_config['item_group']['post_image']:        'image',
+    xbd_config['item_group']['pre_image_target']:  'mask',
     xbd_config['item_group']['post_image_target']: 'mask',
 })
 
 train_dataset = xBDDataset(mode='train', config=xbd_config, stage=2, transforms=train_transforms)
-val_dataset = xBDDataset(mode='test', config=xbd_config, stage=2)
+val_dataset   = xBDDataset(mode='test',  config=xbd_config, stage=2)
 
 train_loader = DataLoader(
     train_dataset,
@@ -199,9 +196,9 @@ scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
     T_max=cfg['epochs'],
 )
 
-scaler = GradScaler('cuda')
+scaler        = GradScaler('cuda')
 best_macro_f1 = 0.0
-epochs = cfg['epochs']
+epochs        = cfg['epochs']
 
 for epoch in range(epochs):
     print(f'\nEpoch {epoch + 1}/{epochs}')

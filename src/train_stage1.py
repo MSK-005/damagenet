@@ -1,7 +1,5 @@
 import os
 import torch
-import numpy as np
-import segmentation_models_pytorch as smp
 from torch.utils.data import DataLoader
 from torch.amp import GradScaler, autocast
 from tqdm import tqdm
@@ -15,7 +13,7 @@ from src.losses import Stage1Loss
 os.environ['PYTORCH_ALLOC_CONF'] = 'expandable_segments:True'
 os.environ['PYTORCH_NO_CUDA_MEMORY_CACHING'] = '1'
 
-xbd_config = load_config('xbd.yaml')
+xbd_config   = load_config('xbd.yaml')
 model_config = load_config('model.yaml')
 
 cfg = model_config['stage1']
@@ -29,13 +27,16 @@ def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps
     optimizer.zero_grad()
 
     for step, batch in enumerate(tqdm(loader)):
-        image = batch['image'].to(device)
+        image  = batch['image'].to(device)
         target = batch['pre_image_target'].to(device).float().unsqueeze(1)
+
         with autocast('cuda'):
             output = model(image)
+            # loss_fn casts to fp32 internally — safe under autocast
             loss = loss_fn(output, target) / accumulation_steps
 
         scaler.scale(loss).backward()
+
         if (step + 1) % accumulation_steps == 0:
             scaler.unscale_(optimizer)
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -54,13 +55,13 @@ def validate(model, loader, device):
 
     with torch.no_grad():
         for batch in loader:
-            image = batch['image'].to(device)
+            image  = batch['image'].to(device)
             target = batch['pre_image_target'].to(device).float().unsqueeze(1)
 
             with autocast('cuda'):
                 output = model(image)
-                loss = loss_fn(output, target)
-            
+                loss   = loss_fn(output, target)
+
             total_loss += loss.item()
             del output, image, target
 
@@ -71,11 +72,13 @@ def validate(model, loader, device):
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f'Using device: {device}')
 
+# pos_weight must be on the same device as the model before DataParallel wraps it
 loss_fn = Stage1Loss(
     pos_weight=torch.tensor([5.0]).to(device),
     bce_weight=1.0,
     dice_weight=1.0,
-    lovasz_weight=1.0
+    lovasz_weight=1.0,
+    clamp_range=20.0,
 )
 
 train_transforms = A.Compose([
@@ -105,7 +108,7 @@ train_transforms = A.Compose([
 })
 
 train_dataset = xBDDataset(mode='train', config=xbd_config, stage=1, transforms=train_transforms)
-val_dataset = xBDDataset(mode='test', config=xbd_config, stage=1)
+val_dataset   = xBDDataset(mode='test',  config=xbd_config, stage=1)
 
 train_loader = DataLoader(
     train_dataset,
@@ -144,9 +147,9 @@ scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
     T_max=cfg['epochs'],
 )
 
-scaler = GradScaler('cuda')
+scaler       = GradScaler('cuda')
 best_val_loss = float('inf')
-epochs = cfg['epochs']
+epochs        = cfg['epochs']
 
 for epoch in range(epochs):
     print(f'\nEpoch {epoch + 1}/{epochs}')
