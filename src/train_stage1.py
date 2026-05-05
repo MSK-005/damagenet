@@ -10,6 +10,7 @@ import albumentations as A
 from src.utils import load_config
 from src.dataset import xBDDataset
 from src.model import LocalizationNet
+from src.losses import Stage1Loss
 
 os.environ['PYTORCH_ALLOC_CONF'] = 'expandable_segments:True'
 os.environ['PYTORCH_NO_CUDA_MEMORY_CACHING'] = '1'
@@ -22,11 +23,6 @@ cfg = model_config['stage1']
 torch.autograd.set_detect_anomaly(True)
 
 
-def loss_fn(output, target):
-    dice = smp.losses.DiceLoss(mode='binary', from_logits=True, smooth=1.0)
-    focal = smp.losses.FocalLoss(mode='binary', alpha=0.75, gamma=2.0)
-    return dice(output, target) + focal(output, target)
-
 def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps):
     model.train()
     total_loss = 0.0
@@ -35,9 +31,9 @@ def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps
     for step, batch in enumerate(tqdm(loader)):
         image = batch['image'].to(device)
         target = batch['pre_image_target'].to(device).float().unsqueeze(1)
-        #with autocast('cuda'):
-        output = model(image)
-        loss = loss_fn(output, target) / accumulation_steps
+        with autocast('cuda'):
+            output = model(image)
+            loss = loss_fn(output, target) / accumulation_steps
 
         scaler.scale(loss).backward()
         if (step + 1) % accumulation_steps == 0:
@@ -61,9 +57,9 @@ def validate(model, loader, device):
             image = batch['image'].to(device)
             target = batch['pre_image_target'].to(device).float().unsqueeze(1)
 
-            #with autocast('cuda'):
-            output = model(image)
-            loss = loss_fn(output, target)
+            with autocast('cuda'):
+                output = model(image)
+                loss = loss_fn(output, target)
             
             total_loss += loss.item()
             del output, image, target
@@ -74,6 +70,13 @@ def validate(model, loader, device):
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f'Using device: {device}')
+
+loss_fn = Stage1Loss(
+    pos_weight=torch.tensor([5.0]).to(device),
+    bce_weight=1.0,
+    dice_weight=1.0,
+    lovasz_weight=1.0
+)
 
 train_transforms = A.Compose([
     A.HorizontalFlip(p=0.5),
