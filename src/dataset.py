@@ -62,8 +62,8 @@ class xBDDataset(Dataset):
             if self.stage == 1:
                 additional_targets[transform_img_keys['pre_image_target']] = 'mask'
             else:
-                additional_targets[transform_img_keys['post_image']]        = 'image'
-                additional_targets[transform_img_keys['pre_image_target']]  = 'mask'
+                additional_targets[transform_img_keys['post_image']] = 'image'
+                additional_targets[transform_img_keys['pre_image_target']] = 'mask'
                 additional_targets[transform_img_keys['post_image_target']] = 'mask'
 
         transforms_list.append(ToTensorV2())
@@ -91,6 +91,7 @@ class xBDDataset(Dataset):
         # Pre-disaster target (building footprint for stage 1, or localization for stage 2)
         pre_target_file  = f"{image_id}{suffix['pre_target_suffix']}{ext}"
         pre_image_target = np.array(Image.open(target_dir / pre_target_file).convert('L'))
+        pre_image_target = (pre_image_target > 0).astype(np.uint8)
 
         if self.mode == 'stats':
             data = {group['pre_image']: image}
