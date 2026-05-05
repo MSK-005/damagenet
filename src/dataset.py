@@ -93,8 +93,6 @@ class xBDDataset(Dataset):
         pre_image_target = np.array(Image.open(target_dir / pre_target_file).convert('L'))
         pre_image_target = (pre_image_target > 0).astype(np.uint8)
         
-        print(np.unique(pre_image_target))
-
         if self.mode == 'stats':
             data = {group['pre_image']: image}
             data = self.convert_to_tensor(**data)
