@@ -46,6 +46,11 @@ def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps
             break
 
         loss = loss_fn(output, target) / accumulation_steps
+
+        if torch.isnan(loss) or torch.isinf(loss):
+            print(f"Bad loss at step {step}: {loss.item()}")
+            print(f"Output min/max: {output.float().min():.4f} / {output.float().max():.4f}")
+            print(f"Target unique: {target.unique()}")
         scaler.scale(loss).backward()
 
         if (step + 1) % accumulation_steps == 0:
