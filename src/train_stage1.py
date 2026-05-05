@@ -35,8 +35,8 @@ def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps
     for step, batch in enumerate(tqdm(loader)):
         image = batch['image'].to(device)
         target = batch['pre_image_target'].to(device).float().unsqueeze(1)
-        #with autocast('cuda'):
-        output = model(image)
+        with autocast('cuda'):
+            output = model(image)
 
         loss = loss_fn(output, target) / accumulation_steps
 
@@ -63,8 +63,8 @@ def validate(model, loader, device):
             image = batch['image'].to(device)
             target = batch['pre_image_target'].to(device).float().unsqueeze(1)
 
-            #with autocast('cuda'):
-            output = model(image)
+            with autocast('cuda'):
+                output = model(image)
 
             loss = loss_fn(output, target)
             total_loss += loss.item()
