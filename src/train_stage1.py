@@ -43,6 +43,8 @@ def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps
         scaler.scale(loss).backward()
 
         if (step + 1) % accumulation_steps == 0:
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             scaler.step(optimizer)
             scaler.update()
             optimizer.zero_grad()
@@ -67,8 +69,8 @@ def validate(model, loader, device):
             loss = loss_fn(output, target)
             total_loss += loss.item()
             del output, image, target
-            torch.cuda.empty_cache()
-    
+
+    torch.cuda.empty_cache()
     return total_loss / len(loader)
 
 
@@ -79,6 +81,15 @@ train_transforms = A.Compose([
     A.HorizontalFlip(p=0.5),
     A.VerticalFlip(p=0.5),
     A.RandomRotate90(p=0.5),
+    A.RandomScale(scale_limit=(-0.5, 0.0), p=0.5),
+    A.PadIfNeeded(
+        min_height=1024,
+        min_width=1024,
+        border_mode=0,
+        fill=0,
+        fill_mask=0,
+    ),
+    A.RandomCrop(height=1024, width=1024),
     A.RandomBrightnessContrast(
         brightness_limit=0.2,
         contrast_limit=0.2,
@@ -89,9 +100,8 @@ train_transforms = A.Compose([
         A.GaussNoise(std_range=(0.01, 0.05)),
     ], p=0.3),
 ], additional_targets={
-    xbd_config['item_group']['pre_image_target']: 'mask'
+    xbd_config['item_group']['pre_image_target']: 'mask',
 })
-
 
 train_dataset = xBDDataset(mode='train', config=xbd_config, stage=1, transforms=train_transforms)
 val_dataset = xBDDataset(mode='test', config=xbd_config, stage=1)
@@ -155,10 +165,8 @@ for epoch in range(epochs):
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         try:
-            # If model was trained using parallel GPUs
             state_dict = model.module.state_dict()
         except AttributeError:
-            # Model was not trained on parallel GPUs
             state_dict = model.state_dict()
         torch.save(state_dict, '/kaggle/working/stage1_best.pth')
         print(f'  Saved best Stage 1 model (Val Loss: {best_val_loss:.4f})')

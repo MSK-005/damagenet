@@ -62,22 +62,23 @@ def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps
     total_loss = 0.0
     optimizer.zero_grad()
 
-    for step, batch in enumerate(tqdm(loader)): 
+    for step, batch in enumerate(tqdm(loader)):
         pre = batch['image'].to(device)
         post = batch['post_image'].to(device)
         target = batch['post_image_target'].to(device).long()
 
         with autocast('cuda'):
             output = model(pre, post)
-        
+
         loss = loss_fn(output, target, class_weights) / accumulation_steps
         scaler.scale(loss).backward()
 
         if (step + 1) % accumulation_steps == 0:
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             scaler.step(optimizer)
             scaler.update()
             optimizer.zero_grad()
-            
 
         total_loss += loss.item() * accumulation_steps
 
@@ -105,8 +106,8 @@ def validate(model, loader, device):
             targets = target.cpu().numpy().flatten()
             np.add.at(confusion, (targets, preds), 1)
             del output, pre, post, target
-            torch.cuda.empty_cache()
 
+    torch.cuda.empty_cache()
     macro_f1, weighted_f1, precision, recall = compute_metrics_from_confusion(confusion)
     return total_loss / len(loader), macro_f1, weighted_f1, precision, recall
 
@@ -118,6 +119,15 @@ train_transforms = A.Compose([
     A.HorizontalFlip(p=0.5),
     A.VerticalFlip(p=0.5),
     A.RandomRotate90(p=0.5),
+    A.RandomScale(scale_limit=(-0.5, 0.0), p=0.5),
+    A.PadIfNeeded(
+        min_height=1024,
+        min_width=1024,
+        border_mode=0,
+        fill=0,
+        fill_mask=0,
+    ),
+    A.RandomCrop(height=1024, width=1024),
     A.RandomBrightnessContrast(
         brightness_limit=0.2,
         contrast_limit=0.2,
@@ -130,7 +140,7 @@ train_transforms = A.Compose([
 ], additional_targets={
     xbd_config['item_group']['post_image']: 'image',
     xbd_config['item_group']['pre_image_target']: 'mask',
-    xbd_config['item_group']['post_image_target']: 'mask'
+    xbd_config['item_group']['post_image_target']: 'mask',
 })
 
 train_dataset = xBDDataset(mode='train', config=xbd_config, stage=2, transforms=train_transforms)
@@ -171,7 +181,7 @@ print(f'Loaded {len(encoder_state)} encoder layers from Stage 1.')
 
 for param in model.encoder.parameters():
     param.requires_grad = False
-print("Encoder frozen for initial Stage 2 training.")
+print('Encoder frozen for initial Stage 2 training.')
 
 if torch.cuda.device_count() > 1:
     model = torch.nn.DataParallel(model)
@@ -203,7 +213,7 @@ for epoch in range(epochs):
             encoder = model.encoder
         for param in encoder.parameters():
             param.requires_grad = True
-        print("Encoder unfrozen.")
+        print('Encoder unfrozen.')
 
     train_loss = train_one_epoch(
         model, train_loader, optimizer,
@@ -226,10 +236,8 @@ for epoch in range(epochs):
     if macro_f1 > best_macro_f1:
         best_macro_f1 = macro_f1
         try:
-            # If model was trained using parallel GPUs
             state_dict = model.module.state_dict()
         except AttributeError:
-            # Model was not trained on parallel GPUs
             state_dict = model.state_dict()
         torch.save(state_dict, '/kaggle/working/stage2_best.pth')
         print(f'  Saved best model (Macro F1: {best_macro_f1:.4f})')
