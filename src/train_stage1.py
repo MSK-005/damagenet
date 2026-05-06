@@ -7,7 +7,7 @@ from torch.amp import GradScaler, autocast
 from tqdm import tqdm
 import albumentations as A
 
-from src.utils import load_config
+from src.utils import load_config, get_dir_path
 from src.dataset import xBDDataset
 from src.model import LocalizationNet
 from src.losses import Stage1Loss
@@ -18,8 +18,8 @@ os.environ['PYTORCH_NO_CUDA_MEMORY_CACHING'] = '1'
 xbd_config   = load_config('xbd.yaml')
 model_config = load_config('model.yaml')
 
-cfg      = model_config['stage1']
-save_dir = model_config['models']['stage1_dir']
+cfg = model_config['stage1']
+save_dir = get_dir_path(model_config['models']['stage1_dir'])
 save_dir.mkdir(parents=True, exist_ok=True)
 save_path = save_dir / cfg['checkpoint']
 

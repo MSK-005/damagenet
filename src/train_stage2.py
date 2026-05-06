@@ -7,7 +7,7 @@ from torch.amp import GradScaler, autocast
 from tqdm import tqdm
 import albumentations as A
 
-from src.utils import load_config, resolve_checkpoint_path
+from src.utils import load_config, resolve_checkpoint_path, get_dir_path
 from src.dataset import xBDDataset
 from src.model import DamageNet
 from src.losses import Stage2Loss
@@ -15,17 +15,17 @@ from src.losses import Stage2Loss
 os.environ['PYTORCH_ALLOC_CONF'] = 'expandable_segments:True'
 os.environ['PYTORCH_NO_CUDA_MEMORY_CACHING'] = '1'
 
-xbd_config   = load_config('xbd.yaml')
+xbd_config = load_config('xbd.yaml')
 model_config = load_config('model.yaml')
 
-cfg      = model_config['stage2']
-save_dir = model_config['models']['stage2_dir']
+cfg = model_config['stage2']
+save_dir = get_dir_path(model_config['models']['stage2_dir'])
 save_dir.mkdir(parents=True, exist_ok=True)
 save_path = save_dir / cfg['checkpoint']
 
-num_classes            = cfg['num_classes']
+num_classes = cfg['num_classes']
 encoder_unfreeze_epoch = cfg['encoder_unfreeze_epoch']
-class_weights          = torch.tensor(cfg['class_weights'])
+class_weights = torch.tensor(cfg['class_weights'])
 
 wandb.init(
     project="damagenet",
