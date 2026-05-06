@@ -18,14 +18,12 @@ post_tensor = sample_data[xbd_config['item_group']['post_image']].unsqueeze(0)
 dummy_input = (pre_tensor, post_tensor)
 
 model_file_name = 'damagenet.pth'
-
-CANDIDATE_PATHS = [
+INPUT_CANDIDATE_PATHS = [
     get_file_path(filename=model_file_name, folders='models'),
     Path(f'/kaggle/input/models/msk005/damagenet/pytorch/default/1/{model_file_name}'),
 ]
 
-model_path = next((p for p in CANDIDATE_PATHS if p.exists()), None)
-
+model_path = next((p for p in INPUT_CANDIDATE_PATHS if p.exists()), None)
 if model_path is None:
     raise FileNotFoundError(
         f'Could not find {model_file_name}. Either place it in models/ or '
@@ -35,10 +33,22 @@ if model_path is None:
 model.load_state_dict(torch.load(model_path, map_location='cpu'))
 model.eval()
 
+output_file = 'damagenet.onnx'
+OUTPUT_CANDIDATE_PATHS = [
+    get_file_path(filename=model_file_name, folders='models'),
+    Path(f'/kaggle/input/models/msk005/damagenet/pytorch/default/1/{model_file_name}'),
+]
+
+output_path = next((p for p in OUTPUT_CANDIDATE_PATHS if p.exists()), None)
+if output_path is None:
+    raise FileNotFoundError(
+        f'Could not find a place to store the {output_file} file.'
+    )
+
 torch.onnx.export(
     model,
     dummy_input,
-    str(get_file_path(filename='damagenet.onnx', folders='models')),
+    str(output_path),
     export_params=True,
     opset_version=18,
     do_constant_folding=True,
