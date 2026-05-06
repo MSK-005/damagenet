@@ -20,8 +20,8 @@ dummy_input = (pre_tensor, post_tensor)
 model_file_name = 'damagenet.pth'
 
 CANDIDATE_PATHS = [
-    get_file_path(filename='stage2_best.pth', folders='models'),
-    Path('/kaggle/input/damagenet/pytorch/default/1/stage2_best.pth'),
+    get_file_path(filename=model_file_name, folders='models'),
+    Path(f'/kaggle/input/damagenet/pytorch/default/1/{model_file_name}'),
 ]
 
 model_path = next((p for p in CANDIDATE_PATHS if p.exists()), None)
