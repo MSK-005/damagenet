@@ -48,7 +48,11 @@ def get_host():
 def get_root_path():
     return Path(__file__).resolve().parents[1]
 
-def get_file_path(filename, folders="", check_exists=False):
+def get_dir_path(folders=''):
+    root = get_root_path()
+    return root / folders
+
+def get_file_path(filename, folders='', check_exists=False):
     root = get_root_path()
     file_path = root / folders / filename
 
