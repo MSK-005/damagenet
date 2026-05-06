@@ -21,7 +21,7 @@ model_file_name = 'damagenet.pth'
 
 CANDIDATE_PATHS = [
     get_file_path(filename=model_file_name, folders='models'),
-    Path(f'/../../input/models/msk005/damagenet/pytorch/default/1/{model_file_name}'),
+    Path(f'/kaggle/input/models/msk005/damagenet/pytorch/default/1/{model_file_name}'),
 ]
 
 model_path = next((p for p in CANDIDATE_PATHS if p.exists()), None)
