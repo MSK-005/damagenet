@@ -17,7 +17,7 @@ pre_tensor  = sample_data[xbd_config['item_group']['pre_image']].unsqueeze(0)
 post_tensor = sample_data[xbd_config['item_group']['post_image']].unsqueeze(0)
 dummy_input = (pre_tensor, post_tensor)
 
-model_file_name = 'stage2_best.pth'
+model_file_name = 'damagenet.pth'
 
 CANDIDATE_PATHS = [
     get_file_path(filename='stage2_best.pth', folders='models'),
