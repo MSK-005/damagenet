@@ -33,22 +33,22 @@ if model_path is None:
 model.load_state_dict(torch.load(model_path, map_location='cpu'))
 model.eval()
 
-output_file_name = 'damagenet.onnx'
-OUTPUT_CANDIDATE_PATHS = [
-    get_file_path(filename=output_file_name, folders='models'),
-    Path(f'/kaggle/working/{output_file_name}'),
-]
+# output_file_name = 'damagenet.onnx'
+# OUTPUT_CANDIDATE_PATHS = [
+#     get_file_path(filename=output_file_name, folders='models'),
+#     Path(f'/kaggle/working/{output_file_name}'),
+# ]
 
-output_path = next((p for p in OUTPUT_CANDIDATE_PATHS if p.exists()), None)
-if output_path is None:
-    raise FileNotFoundError(
-        f'Could not find a place to store the {output_file_name} file.'
-    )
+# output_path = next((p for p in OUTPUT_CANDIDATE_PATHS if p.exists()), None)
+# if output_path is None:
+#     raise FileNotFoundError(
+#         f'Could not find a place to store the {output_file_name} file.'
+#     )
 
 torch.onnx.export(
     model,
     dummy_input,
-    str(output_path),
+    #str(output_path),
     export_params=True,
     opset_version=18,
     do_constant_folding=True,
