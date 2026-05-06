@@ -15,8 +15,18 @@ pre_tensor  = sample_data[xbd_config['item_group']['pre_image']].unsqueeze(0)
 post_tensor = sample_data[xbd_config['item_group']['post_image']].unsqueeze(0)
 dummy_input = (pre_tensor, post_tensor)
 
-model_path = get_file_path(filename='stage2_best.pth', folders='models')
-model.load_state_dict(torch.load(model_path, map_location='cpu'))
+model_file_name = 'stage2_best.pth'
+
+try:
+    model_file_path = get_file_path(filename=model_file_name, folders='models')
+except FileNotFoundError:
+    try:
+        model_file_path = get_file_path(filename=model_file_name, folders='/kaggle/input/models/msk005/damagenet/pytorch/default/1')
+    except FileNotFoundError:
+        raise Exception('Could not find model. Please upload it in the data folder.' \
+        'If you are on a separate Kaggle notebook just for converting the model, then upload the model on Kaggle as a dataset and import from there.')
+
+model.load_state_dict(torch.load(model_file_path, map_location='cpu'))
 model.eval()
 
 torch.onnx.export(
