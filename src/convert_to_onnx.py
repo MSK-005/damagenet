@@ -1,6 +1,8 @@
 import torch
 import torch.onnx
 
+from pathlib import Path
+
 from src.utils import load_config, get_file_path
 from src.model import DamageNet
 from src.dataset import xBDDataset
@@ -17,16 +19,20 @@ dummy_input = (pre_tensor, post_tensor)
 
 model_file_name = 'stage2_best.pth'
 
-try:
-    model_file_path = get_file_path(filename=model_file_name, folders='models')
-except FileNotFoundError:
-    try:
-        model_file_path = get_file_path(filename=model_file_name, folders='/kaggle/input/models/msk005/damagenet/pytorch/default/1')
-    except FileNotFoundError:
-        raise Exception('Could not find model. Please upload it in the data folder.' \
-        'If you are on a separate Kaggle notebook just for converting the model, then upload the model on Kaggle as a dataset and import from there.')
+CANDIDATE_PATHS = [
+    get_file_path(filename='stage2_best.pth', folders='models'),
+    Path('/kaggle/input/damagenet/pytorch/default/1/stage2_best.pth'),
+]
 
-model.load_state_dict(torch.load(model_file_path, map_location='cpu'))
+model_path = next((p for p in CANDIDATE_PATHS if p.exists()), None)
+
+if model_path is None:
+    raise FileNotFoundError(
+        f'Could not find {model_file_name}. Either place it in models/ or '
+        'upload it as a Kaggle dataset and attach it to this notebook.'
+    )
+
+model.load_state_dict(torch.load(model_path, map_location='cpu'))
 model.eval()
 
 torch.onnx.export(
