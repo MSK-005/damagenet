@@ -9,17 +9,34 @@ classes:
 stage1:
   in_channels: 3
   num_classes: 1
-  epochs: 20
+  epochs: 40
   batch_size: 16
   accumulation_steps: 2
   learning_rate: 0.0001
   num_workers: 4
+  pos_weight: 5.0
+  bce_weight: 1.0
+  dice_weight: 1.0
+  lovasz_weight: 1.0
+  checkpoint: "stage1_best.pth"
 
 stage2:
   in_channels: 6
   num_classes: 3
-  epochs: 35
+  epochs: 60
   batch_size: 16
   accumulation_steps: 2
   learning_rate: 0.00005
   num_workers: 4
+  class_weights: [1.0, 16.0, 32.0]
+  encoder_unfreeze_epoch: 3
+  checkpoint: "stage2_best.pth"
+
+models:
+  stage1_dir: "models/stage1"
+  stage2_dir: "models/stage2"
+  onnx_dir:   "models"
+
+kaggle:
+  stage1_input_path: "/kaggle/input/your-dataset-name/stage1_best.pth"
+  stage2_input_path: "/kaggle/input/your-dataset-name/stage2_best.pth"

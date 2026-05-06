@@ -54,7 +54,10 @@ def predict(pre_img: Image.Image, post_img: Image.Image) -> Image.Image:
 
     # outputs[0]: (1, num_classes, H, W) logits
     mask = np.argmax(outputs[0], axis=1)[0]  # (H, W)
-
+    print(f"Raw logits min/max: {outputs[0].min():.3f} / {outputs[0].max():.3f}")
+    print(f"Mask unique values: {np.unique(mask)}")
+    print(f"Class distribution: { {int(v): int(np.sum(mask == v)) for v in np.unique(mask)} }")
+    
     return overlay_mask_on_image(post_img, mask)
 
 

@@ -37,6 +37,38 @@ def load_config(filename):
             for mode in ['train', 'test']:
                 data[mode]['abs_path'] = data['system']['root'] / data[mode]['dir']
         return data
+    
+def resolve_checkpoint_path(model_config, stage: int) -> Path:
+    """
+    Resolve the path to a stage checkpoint using candidate locations in priority order:
+      1. Configured model directory (local or same Kaggle session output)
+      2. /kaggle/working (Kaggle session, different script)
+      3. Kaggle input dataset (uploaded from a previous session)
+
+    Raises FileNotFoundError if none are found.
+    """
+    filename = model_config[f'stage{stage}']['checkpoint']
+    kaggle_input_path = model_config.get('kaggle', {}).get(f'stage{stage}_input_path')
+
+    candidates = [
+        model_config['models'][f'stage{stage}_dir'] / filename,
+        Path('/kaggle/working') / filename,
+    ]
+    if kaggle_input_path:
+        candidates.append(Path(kaggle_input_path))
+
+    path = next((p for p in candidates if p.exists()), None)
+    if path is None:
+        checked = '\n  '.join(str(p) for p in candidates)
+        raise FileNotFoundError(
+            f"Could not find Stage {stage} checkpoint '{filename}'.\n"
+            f"Searched:\n  {checked}\n"
+            f"Update kaggle.stage{stage}_input_path in configs/model.yaml "
+            f"with your Kaggle dataset path."
+        )
+
+    print(f"Found Stage {stage} checkpoint: {path}")
+    return path
 
 def get_host():
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE', ''):

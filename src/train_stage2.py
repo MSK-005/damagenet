@@ -7,7 +7,7 @@ from torch.amp import GradScaler, autocast
 from tqdm import tqdm
 import albumentations as A
 
-from src.utils import load_config
+from src.utils import load_config, resolve_checkpoint_path
 from src.dataset import xBDDataset
 from src.model import DamageNet
 from src.losses import Stage2Loss
@@ -18,29 +18,40 @@ os.environ['PYTORCH_NO_CUDA_MEMORY_CACHING'] = '1'
 xbd_config   = load_config('xbd.yaml')
 model_config = load_config('model.yaml')
 
-cfg = model_config['stage2']
-num_classes = cfg['num_classes']
+cfg      = model_config['stage2']
+save_dir = model_config['models']['stage2_dir']
+save_dir.mkdir(parents=True, exist_ok=True)
+save_path = save_dir / cfg['checkpoint']
 
-# Weights reflect xBD class imbalance: background < minor < major/destroyed
-class_weights = torch.tensor([1.0, 4.0, 8.0])
+num_classes            = cfg['num_classes']
+encoder_unfreeze_epoch = cfg['encoder_unfreeze_epoch']
+class_weights          = torch.tensor(cfg['class_weights'])
 
 wandb.init(
     project="damagenet",
     name="stage2",
     config={
-        "encoder":            model_config['model']['name'],
-        "epochs":             cfg['epochs'],
-        "batch_size":         cfg['batch_size'],
-        "learning_rate":      cfg['learning_rate'],
-        "accumulation_steps": cfg['accumulation_steps'],
-        "num_classes":        cfg['num_classes'],
-        "class_weights":      class_weights.tolist(),
-        "encoder_unfreeze_epoch": 3,
+        "encoder":                model_config['model']['name'],
+        "epochs":                 cfg['epochs'],
+        "batch_size":             cfg['batch_size'],
+        "learning_rate":          cfg['learning_rate'],
+        "accumulation_steps":     cfg['accumulation_steps'],
+        "num_classes":            num_classes,
+        "class_weights":          cfg['class_weights'],
+        "encoder_unfreeze_epoch": encoder_unfreeze_epoch,
     }
 )
 
+CLASS_NAMES = ['no_damage', 'partial_damage', 'destroyed']
+
+
 def compute_metrics_from_confusion(confusion):
+    """
+    Returns per-class and aggregate metrics from a confusion matrix.
+    Excludes classes absent from both predictions and targets (IoU undefined).
+    """
     f1_per_class        = []
+    iou_per_class       = []
     precision_per_class = []
     recall_per_class    = []
     class_counts        = confusion.sum(axis=1)
@@ -51,18 +62,27 @@ def compute_metrics_from_confusion(confusion):
         fp = confusion[:, i].sum() - tp
         fn = confusion[i, :].sum() - tp
 
-        precision = tp / (tp + fp) if (tp + fp) > 0 else 0
-        recall    = tp / (tp + fn) if (tp + fn) > 0 else 0
-        f1        = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall    = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1        = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+        iou       = tp / (tp + fp + fn) if (tp + fp + fn) > 0 else 0.0
 
         precision_per_class.append(precision)
         recall_per_class.append(recall)
         f1_per_class.append(f1)
+        iou_per_class.append(iou)
 
-    macro_f1    = np.mean(f1_per_class)
-    weighted_f1 = np.sum([f1_per_class[i] * class_counts[i] for i in range(num_classes)]) / total
+    macro_f1  = float(np.mean(f1_per_class))
+    macro_iou = float(np.mean(iou_per_class))
 
-    return macro_f1, weighted_f1, np.mean(precision_per_class), np.mean(recall_per_class)
+    return (
+        macro_f1,
+        macro_iou,
+        f1_per_class,
+        iou_per_class,
+        precision_per_class,
+        recall_per_class,
+    )
 
 
 def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps):
@@ -77,8 +97,7 @@ def train_one_epoch(model, loader, optimizer, scaler, device, accumulation_steps
 
         with autocast('cuda'):
             output = model(pre, post)
-            # Stage2Loss casts to fp32 internally — safe under autocast
-            loss = loss_fn(output, target) / accumulation_steps
+            loss   = loss_fn(output, target) / accumulation_steps
 
         scaler.scale(loss).backward()
 
@@ -113,18 +132,31 @@ def validate(model, loader, device):
 
             preds   = output.argmax(dim=1).cpu().numpy().flatten()
             targets = target.cpu().numpy().flatten()
-            np.add.at(confusion, (targets, preds), 1)
+
+            valid   = targets != 255
+            np.add.at(confusion, (targets[valid], preds[valid]), 1)
+
             del output, pre, post, target
 
     torch.cuda.empty_cache()
-    macro_f1, weighted_f1, precision, recall = compute_metrics_from_confusion(confusion)
-    return total_loss / len(loader), macro_f1, weighted_f1, precision, recall
+
+    macro_f1, macro_iou, f1_per_class, iou_per_class, precision_per_class, recall_per_class = \
+        compute_metrics_from_confusion(confusion)
+
+    return (
+        total_loss / len(loader),
+        macro_f1,
+        macro_iou,
+        f1_per_class,
+        iou_per_class,
+        precision_per_class,
+        recall_per_class,
+    )
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f'Using device: {device}')
 
-# Instantiate loss before DataParallel so buffers land on the right device
 loss_fn = Stage2Loss(class_weights=class_weights).to(device)
 
 train_transforms = A.Compose([
@@ -164,7 +196,7 @@ train_loader = DataLoader(
     shuffle=True,
     num_workers=cfg['num_workers'],
     pin_memory=True,
-    persistent_workers=True
+    persistent_workers=True,
 )
 
 val_loader = DataLoader(
@@ -173,7 +205,7 @@ val_loader = DataLoader(
     shuffle=False,
     num_workers=cfg['num_workers'],
     pin_memory=True,
-    persistent_workers=True
+    persistent_workers=True,
 )
 
 print(f'Training samples:   {len(train_dataset)}')
@@ -181,9 +213,8 @@ print(f'Validation samples: {len(val_dataset)}')
 
 model = DamageNet(config=model_config).to(device)
 
-print('Loading Stage 1 weights...')
-stage1_state = torch.load('/kaggle/working/stage1_best.pth', map_location=device)
-
+stage1_path = resolve_checkpoint_path(model_config, stage=1)
+stage1_state = torch.load(stage1_path, map_location=device)
 encoder_state = {
     k.replace('model.encoder.', ''): v
     for k, v in stage1_state.items()
@@ -214,57 +245,72 @@ scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
 
 scaler        = GradScaler('cuda')
 best_macro_f1 = 0.0
+best_val_loss = float('inf')
+encoder_unfrozen = False
 epochs        = cfg['epochs']
 
 for epoch in range(epochs):
     print(f'\nEpoch {epoch + 1}/{epochs}')
 
-    if epoch >= 3:
+    if epoch == encoder_unfreeze_epoch and not encoder_unfrozen:
         try:
             encoder = model.module.encoder
         except AttributeError:
             encoder = model.encoder
         for param in encoder.parameters():
             param.requires_grad = True
-        print('Encoder unfrozen.')
+        encoder_unfrozen = True
+
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer,
+            T_max=cfg['epochs'] - encoder_unfreeze_epoch,
+        )
+        print(f'Encoder unfrozen. LR schedule restarted over {cfg["epochs"] - encoder_unfreeze_epoch} epochs.')
 
     train_loss = train_one_epoch(
         model, train_loader, optimizer,
         scaler, device, cfg['accumulation_steps'],
     )
 
-    val_loss, macro_f1, weighted_f1, precision, recall = validate(
-        model, val_loader, device,
-    )
+    val_loss, macro_f1, macro_iou, f1_per_class, iou_per_class, precision_per_class, recall_per_class = \
+        validate(model, val_loader, device)
 
     scheduler.step()
 
-    print(f'Train Loss:    {train_loss:.4f}')
-    print(f'Val Loss:      {val_loss:.4f}')
-    print(f'F1 (Macro):    {macro_f1:.4f}')
-    print(f'F1 (Weighted): {weighted_f1:.4f}')
-    print(f'Precision:     {precision:.4f}')
-    print(f'Recall:        {recall:.4f}')
+    print(f'Train Loss  : {train_loss:.4f}')
+    print(f'Val Loss    : {val_loss:.4f}')
+    print(f'F1  (Macro) : {macro_f1:.4f}')
+    print(f'IoU (Macro) : {macro_iou:.4f}')
+    for i, name in enumerate(CLASS_NAMES):
+        print(f'  {name:15s} — F1: {f1_per_class[i]:.4f}  IoU: {iou_per_class[i]:.4f}  '
+              f'P: {precision_per_class[i]:.4f}  R: {recall_per_class[i]:.4f}')
 
-    wandb.log({
-        "epoch":        epoch + 1,
-        "train_loss":   train_loss,
-        "val_loss":     val_loss,
-        "lr":           scheduler.get_last_lr()[0],
-        "f1_macro":     macro_f1,
-        "f1_weighted":  weighted_f1,
-        "precision":    precision,
-        "recall":       recall,
-    })
+    log_dict = {
+        "epoch":      epoch + 1,
+        "train_loss": train_loss,
+        "val_loss":   val_loss,
+        "f1_macro":   macro_f1,
+        "iou_macro":  macro_iou,
+        "lr":         scheduler.get_last_lr()[0],
+    }
+    for i, name in enumerate(CLASS_NAMES):
+        log_dict[f'f1_{name}']        = f1_per_class[i]
+        log_dict[f'iou_{name}']       = iou_per_class[i]
+        log_dict[f'precision_{name}'] = precision_per_class[i]
+        log_dict[f'recall_{name}']    = recall_per_class[i]
 
-    if macro_f1 > best_macro_f1:
-        best_macro_f1 = macro_f1
+    wandb.log(log_dict)
+
+    improved = macro_f1 > best_macro_f1 or (not encoder_unfrozen and val_loss < best_val_loss)
+    if improved:
+        best_macro_f1 = max(macro_f1, best_macro_f1)
+        best_val_loss = min(val_loss, best_val_loss)
         try:
             state_dict = model.module.state_dict()
         except AttributeError:
             state_dict = model.state_dict()
-        torch.save(state_dict, '/kaggle/working/stage2_best.pth')
-        print(f'  Saved best model (Macro F1: {best_macro_f1:.4f})')
+        torch.save(state_dict, save_path)
+        print(f'  Saved best model → {save_path}  (Macro F1: {best_macro_f1:.4f})')
 
 print(f'\nStage 2 complete. Best Macro F1: {best_macro_f1:.4f}')
 wandb.finish()

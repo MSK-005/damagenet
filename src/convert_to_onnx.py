@@ -1,9 +1,7 @@
 import torch
 import torch.onnx
 
-from pathlib import Path
-
-from src.utils import load_config, get_file_path, get_dir_path
+from src.utils import load_config, resolve_checkpoint_path
 from src.model import DamageNet
 from src.dataset import xBDDataset
 
@@ -17,35 +15,21 @@ pre_tensor  = sample_data[xbd_config['item_group']['pre_image']].unsqueeze(0)
 post_tensor = sample_data[xbd_config['item_group']['post_image']].unsqueeze(0)
 dummy_input = (pre_tensor, post_tensor)
 
-model_file_name = 'damagenet.pth'
-INPUT_CANDIDATE_PATHS = [
-    get_file_path(filename=model_file_name, folders='models'),
-    Path(f'/kaggle/input/models/msk005/damagenet/pytorch/default/1/{model_file_name}'),
-]
-
-model_path = next((p for p in INPUT_CANDIDATE_PATHS if p.exists()), None)
-if model_path is None:
-    raise FileNotFoundError(
-        f'Could not find {model_file_name}. Either place it in models/ or '
-        'upload it as a Kaggle dataset and attach it to this notebook.'
-    )
-
+# Load Stage 2 checkpoint using the candidate path mechanism
+model_path = resolve_checkpoint_path(model_config, stage=2)
 model.load_state_dict(torch.load(model_path, map_location='cpu'))
 model.eval()
 
-OUTPUT_CANDIDATE_PATHS = [
-    get_dir_path(folders='models'),
-    Path('/kaggle/working'),
-]
+# Output path — write to configured onnx_dir, fall back to /kaggle/working
+onnx_dir = model_config['models']['onnx_dir']
+onnx_filename = 'damagenet.onnx'
 
-output_file_name = 'damagenet.onnx'
-output_path  = next((d for d in OUTPUT_CANDIDATE_PATHS if d.exists()), None)
-if output_path is None:
-    raise FileNotFoundError(
-        f'Could not find a writable directory for {output_file_name}.'
-    )
+if onnx_dir.exists():
+    output_path = onnx_dir / onnx_filename
+else:
+    from pathlib import Path
+    output_path = Path('/kaggle/working') / onnx_filename
 
-output_path = output_path / output_file_name
 print(f'Saving ONNX model to: {output_path}')
 
 torch.onnx.export(
