@@ -36,7 +36,7 @@ model.eval()
 output_file_name = 'damagenet.onnx'
 OUTPUT_CANDIDATE_PATHS = [
     get_file_path(filename=output_file_name, folders='models'),
-    Path(f'/kaggle/working/{model_file_name}'),
+    Path(f'/kaggle/working/'),
 ]
 
 output_path = next((p for p in OUTPUT_CANDIDATE_PATHS if p.exists()), None)
