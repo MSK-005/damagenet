@@ -50,7 +50,7 @@ def resolve_checkpoint_path(model_config, stage: int) -> Path:
     filename = model_config[f'stage{stage}']['checkpoint']
     kaggle_input_path = model_config['kaggle'][f'stage{stage}_input_path']
     if kaggle_input_path:
-        kaggle_input_path = Path(kaggle_input_path)
+        kaggle_input_path = Path(kaggle_input_path) / filename
 
     candidates = [
         Path(model_config['models'][f'stage{stage}_dir']) / filename,
