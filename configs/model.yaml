@@ -38,5 +38,5 @@ models:
   onnx_dir:   "models"
 
 kaggle:
-  stage1_input_path: "/kaggle/input/your-dataset-name/stage1_best.pth"
-  stage2_input_path: "/kaggle/input/your-dataset-name/stage2_best.pth"
+  stage1_input_path: "/kaggle/input/models/hunain210/damagenet/pytorch/stage1/1"
+  stage2_input_path: null

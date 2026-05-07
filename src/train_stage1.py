@@ -239,7 +239,7 @@ for epoch in range(epochs):
         except AttributeError:
             state_dict = model.state_dict()
         torch.save(state_dict, save_path)
-        print(f'  Saved best model → {save_path}  (Val Loss: {best_val_loss:.4f})')
+        print(f'  Saved best model: {save_path}  (Val Loss: {best_val_loss:.4f})')
 
 print(f'\nStage 1 complete. Best Val Loss: {best_val_loss:.4f}')
 wandb.finish()

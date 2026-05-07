@@ -310,7 +310,7 @@ for epoch in range(epochs):
         except AttributeError:
             state_dict = model.state_dict()
         torch.save(state_dict, save_path)
-        print(f'  Saved best model → {save_path}  (Macro F1: {best_macro_f1:.4f})')
+        print(f'  Saved best model: {save_path}  (Macro F1: {best_macro_f1:.4f})')
 
 print(f'\nStage 2 complete. Best Macro F1: {best_macro_f1:.4f}')
 wandb.finish()

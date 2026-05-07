@@ -99,7 +99,6 @@ class Stage2Loss(nn.Module):
             mode='multiclass',
             from_logits=True,
             ignore_index=IGNORE_INDEX,
-            ignore_empty=True,       # exclude absent classes per batch
         )
         self.focal = smp.losses.FocalLoss(
             mode='multiclass',
