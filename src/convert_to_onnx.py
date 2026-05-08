@@ -21,7 +21,7 @@ model.load_state_dict(torch.load(model_path, map_location='cpu'))
 model.eval()
 
 # Output path — write to configured onnx_dir, fall back to /kaggle/working
-onnx_dir = model_config['models']['onnx_dir']
+onnx_dir = Path(model_config['models']['onnx_dir'])
 onnx_filename = 'damagenet.onnx'
 
 if onnx_dir.exists():
