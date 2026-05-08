@@ -39,4 +39,4 @@ models:
 
 kaggle:
   stage1_input_path: "/kaggle/input/models/hunain210/damagenet/pytorch/stage1/1"
-  stage2_input_path: null
+  stage2_input_path: "/kaggle/input/models/hunain210/damagenet/pytorch/stage2/1"
