@@ -1,6 +1,8 @@
 import torch
 import torch.onnx
 
+from pathlib import Path
+
 from src.utils import load_config, resolve_checkpoint_path
 from src.model import DamageNet
 from src.dataset import xBDDataset
@@ -27,7 +29,6 @@ onnx_filename = 'damagenet.onnx'
 if onnx_dir.exists():
     output_path = onnx_dir / onnx_filename
 else:
-    from pathlib import Path
     output_path = Path('/kaggle/working') / onnx_filename
 
 print(f'Saving ONNX model to: {output_path}')
