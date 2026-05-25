@@ -40,5 +40,5 @@ models:
   onnx_dir:   "models"
 
 kaggle:
-  stage1_input_path: "/kaggle/input/models/moazzamshahzad/damagenet/pyTorch/stage1"
-  stage2_input_path: "/kaggle/input/models/moazzamshahzad/damagenet/pyTorch/stage2"
+  stage1_input_path: "/kaggle/input/models/moazzamshahzad/damagenet/pytorch/stage1/1/stage1_best.pth"
+  stage2_input_path: "/kaggle/input/models/moazzamshahzad/damagenet/pytorch/stage2/1/stage2_best.pth"
