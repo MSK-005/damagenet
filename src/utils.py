@@ -1,5 +1,6 @@
 import yaml
 import os
+import torch
 from pathlib import Path
 
 def get_xbd_image_ids(path):
@@ -55,6 +56,7 @@ def resolve_checkpoint_path(model_config, stage: int) -> Path:
     candidates = [
         Path(model_config['models'][f'stage{stage}_dir']) / filename,
         Path('/kaggle/working') / filename,
+        Path(model_config['kaggle'][f'stage{stage}_input_path'])
     ]
     if kaggle_input_path:
         candidates.append(Path(kaggle_input_path))
@@ -94,3 +96,31 @@ def get_file_path(filename, folders='', check_exists=False):
         raise FileNotFoundError(f'Could not find file path: {file_path}')
 
     return file_path
+
+def load_model_checkpoint(model, optimizer, scheduler, scaler, path):
+    checkpoint = torch.load(path)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+    scaler.load_state_dict(checkpoint['scaler_state_dict'])
+    epoch = checkpoint['epoch']
+    loss = checkpoint['loss']
+    print(f'Loaded model. Continuing training from epoch {epoch + 1}')
+    return model, optimizer, scheduler, scaler, epoch + 1, loss
+
+def save_model_checkpoint(model, optimizer, scheduler, scaler, epoch, loss, save_path):
+    try:
+        model_state_dict = model.module.state_dict()
+    except AttributeError:
+        model_state_dict = model.state_dict()
+
+    torch.save({
+        "model_state_dict": model_state_dict,
+        "optimizer_state_dict": optimizer.state_dict(),
+        'scheduler_state_dict': scheduler.state_dict(),
+        'scaler_state_dict': scaler.state_dict(),
+        "epoch": epoch,
+        "loss": loss
+    }, save_path)
+    print(f'  Saved best model: {save_path}  (Val Loss: {loss:.4f})')
+    print(f'Model checkpoint saved at epoch {epoch}')
